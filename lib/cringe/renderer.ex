@@ -6,6 +6,7 @@ defmodule Cringe.Renderer do
   alias Cringe.ANSI
   alias Cringe.Document.{Box, Stack, Text}
   alias Cringe.Frame
+  alias Cringe.Layout
   alias Cringe.Measure
 
   @type render_opts :: [width: pos_integer(), height: pos_integer(), ansi: boolean()]
@@ -34,6 +35,7 @@ defmodule Cringe.Renderer do
     content
     |> String.split("\n", trim: false)
     |> Enum.map(&ANSI.apply(&1, opts, ansi?))
+    |> Layout.resize_block(opts)
   end
 
   defp lines(%Stack{direction: :vertical, children: children, opts: opts}, ansi?) do
@@ -44,19 +46,24 @@ defmodule Cringe.Renderer do
     |> Enum.map(&lines(&1, ansi?))
     |> Enum.reject(&(&1 == []))
     |> join_blocks(separator)
+    |> Layout.resize_block(opts)
   end
 
   defp lines(%Stack{direction: :horizontal, children: children, opts: opts}, ansi?) do
     gap = Keyword.get(opts, :gap, 0)
     separator = String.duplicate(" ", gap)
     blocks = Enum.map(children, &lines(&1, ansi?))
+    widths = row_widths(children, blocks, gap, Keyword.get(opts, :width))
     height = blocks |> Enum.map(&length/1) |> Enum.max(fn -> 0 end)
 
     blocks
-    |> Enum.map(&pad_block_height(&1, height))
-    |> Enum.map(&pad_block_width/1)
+    |> Enum.zip(widths)
+    |> Enum.map(fn {block, width} ->
+      block |> pad_block_height(height) |> Layout.resize_width(width, :left)
+    end)
     |> transpose_blocks()
     |> join_rows(separator)
+    |> Layout.resize_block(Keyword.drop(opts, [:width]))
   end
 
   defp lines(%Box{child: child, opts: opts}, ansi?) do
@@ -69,6 +76,7 @@ defmodule Cringe.Renderer do
       nil -> content
       _ -> bordered(content, border)
     end
+    |> Layout.resize_block(opts)
   end
 
   defp join_blocks([], _separator), do: []
@@ -79,13 +87,34 @@ defmodule Cringe.Renderer do
     |> List.flatten()
   end
 
-  defp pad_block_height(block, height) do
-    block ++ List.duplicate("", max(height - length(block), 0))
+  defp row_widths(children, blocks, gap, target_width) do
+    natural = Enum.map(blocks, &block_width/1)
+    requested = Enum.map(children, &requested_width/1)
+    grow = Enum.map(children, &grow/1)
+    base = Enum.zip_with(requested, natural, &(&1 || &2))
+
+    distribute_grow(base, grow, target_width, gap)
   end
 
-  defp pad_block_width(block) do
-    width = block_width(block)
-    Enum.map(block, &Measure.pad(&1, width))
+  defp requested_width(%{opts: opts}), do: Keyword.get(opts, :width)
+  defp grow(%{opts: opts}), do: Keyword.get(opts, :grow, 0)
+
+  defp distribute_grow(base, _grow, nil, _gap), do: base
+
+  defp distribute_grow(base, grow, target_width, gap) do
+    total_gap = max(length(base) - 1, 0) * gap
+    extra = max(target_width - Enum.sum(base) - total_gap, 0)
+    total_grow = Enum.sum(grow)
+
+    if total_grow > 0 do
+      Enum.zip_with(base, grow, &(&1 + div(extra * &2, total_grow)))
+    else
+      base
+    end
+  end
+
+  defp pad_block_height(block, height) do
+    block ++ List.duplicate("", max(height - length(block), 0))
   end
 
   defp transpose_blocks([]), do: []

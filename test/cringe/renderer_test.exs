@@ -56,4 +56,23 @@ defmodule Cringe.RendererTest do
 
     assert Cringe.render(document) == "+--+\n|hi|\n+--+"
   end
+
+  test "applies fixed width and alignment" do
+    assert Cringe.text("hi", width: 6, align: :right) |> Cringe.render() == "    hi"
+    assert Cringe.text("hi", width: 6, align: :center) |> Cringe.render() == "  hi  "
+  end
+
+  test "distributes row grow width" do
+    document =
+      Cringe.row(
+        [
+          Cringe.text("a", width: 3),
+          Cringe.text("b", grow: 1)
+        ],
+        gap: 1,
+        width: 8
+      )
+
+    assert Cringe.render(document) == "a   b   "
+  end
 end

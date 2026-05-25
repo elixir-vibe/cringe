@@ -46,6 +46,7 @@ Run examples locally:
 ```sh
 mix run examples/hello.exs
 mix run examples/dashboard.exs
+mix run examples/layout.exs
 mix run examples/counter.exs
 ```
 
