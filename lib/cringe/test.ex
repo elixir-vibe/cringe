@@ -22,9 +22,15 @@ defmodule Cringe.Test do
   @spec rendered(Cringe.Document.t(), keyword()) :: String.t()
   def rendered(document, opts \\ []), do: Cringe.render(document, opts)
 
-  @spec clean_snapshot(String.t()) :: String.t()
-  def clean_snapshot(snapshot) do
-    snapshot
+  @doc """
+  Normalizes an expected multiline heredoc for render assertions.
+
+  Leading/trailing newlines are removed and common indentation is stripped, so
+  expected terminal output can stay readable inside test modules.
+  """
+  @spec clean_heredoc(String.t()) :: String.t()
+  def clean_heredoc(heredoc) do
+    heredoc
     |> String.trim("\n")
     |> String.split("\n", trim: false)
     |> dedent_lines()
@@ -34,13 +40,13 @@ defmodule Cringe.Test do
   defmacro assert_render(document, expected, opts \\ []) do
     quote do
       assert Cringe.render(unquote(document), unquote(opts)) ==
-               Cringe.Test.clean_snapshot(unquote(expected))
+               Cringe.Test.clean_heredoc(unquote(expected))
     end
   end
 
   defmacro assert_text(server, expected) do
     quote do
-      assert Cringe.Runtime.text(unquote(server)) == Cringe.Test.clean_snapshot(unquote(expected))
+      assert Cringe.Runtime.text(unquote(server)) == Cringe.Test.clean_heredoc(unquote(expected))
     end
   end
 
