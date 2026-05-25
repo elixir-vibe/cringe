@@ -11,15 +11,25 @@ Early skeleton. The API is not stable yet.
 ## First document
 
 ```elixir
-Cringe.text("Cringe\nTerminal UI for the BEAM")
+Cringe.box(
+  Cringe.column(
+    [
+      Cringe.text("Cringe"),
+      Cringe.text("Terminal UI for the BEAM")
+    ],
+    gap: 1
+  ),
+  padding: 1
+)
 |> Cringe.render(width: 80)
 |> IO.puts()
 ```
 
-Run it locally:
+Run examples locally:
 
 ```sh
 mix run examples/hello.exs
+mix run examples/dashboard.exs
 ```
 
 ## Installation

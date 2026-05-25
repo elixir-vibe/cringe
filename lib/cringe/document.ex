@@ -3,5 +3,5 @@ defmodule Cringe.Document do
   Terminal document helpers.
   """
 
-  @type t :: Cringe.Document.Text.t()
+  @type t :: Cringe.Document.Text.t() | Cringe.Document.Stack.t() | Cringe.Document.Box.t()
 end
