@@ -5,7 +5,7 @@ defmodule Counter do
 
   def handle_event({:key, :up}, state), do: {:noreply, %{state | count: state.count + 1}}
 
-  def render(state), do: Cringe.box(Cringe.text("Count: #{state.count}"), padding: 1)
+  def render(state), do: box(text("Count: #{state.count}"), padding: 1)
 end
 
 {:ok, app} = Cringe.run(Counter)

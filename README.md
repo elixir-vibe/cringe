@@ -11,17 +11,19 @@ Early alpha skeleton. The API is not stable yet.
 ## First document
 
 ```elixir
-Cringe.box(
-  Cringe.column(
+import Cringe
+
+box(
+  column(
     [
-      Cringe.text("Cringe", color: :green, bold: true),
-      Cringe.text("Terminal UI for the BEAM")
+      text("Cringe", color: :green, bold: true),
+      text("Terminal UI for the BEAM")
     ],
     gap: 1
   ),
   padding: 1
 )
-|> Cringe.render(width: 80, ansi: true)
+|> render(width: 80, ansi: true)
 |> IO.puts()
 ```
 
@@ -33,7 +35,7 @@ defmodule Counter do
 
   def init(_opts), do: {:ok, %{count: 0}}
   def handle_event({:key, :up}, state), do: {:noreply, %{state | count: state.count + 1}}
-  def render(state), do: Cringe.box(Cringe.text("Count: #{state.count}"), padding: 1)
+  def render(state), do: box(text("Count: #{state.count}"), padding: 1)
 end
 
 {:ok, app} = Cringe.run(Counter)

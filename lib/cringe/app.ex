@@ -11,6 +11,8 @@ defmodule Cringe.App do
     quote do
       @behaviour Cringe.App
 
+      import Cringe
+
       @impl Cringe.App
       def handle_event(_event, state), do: {:noreply, state}
 
