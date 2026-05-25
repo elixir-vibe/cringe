@@ -34,7 +34,7 @@ defmodule Counter do
   def render(state), do: box(text("Count: #{state.count}"), padding: 1)
 end
 
-{:ok, app} = Cringe.run(Counter, backend: Cringe.Runtime.Backend.IO)
+{:ok, app} = Cringe.run(Counter, backend: Cringe.Runtime.Backend.Terminal)
 Cringe.Runtime.dispatch(app, {:key, :up})
 Cringe.Runtime.paint(app)
 ```

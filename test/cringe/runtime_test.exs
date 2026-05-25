@@ -82,4 +82,23 @@ defmodule Cringe.RuntimeTest do
     assert next_output =~ "Count: 1"
     refute next_output =~ "\e[H\e[2J"
   end
+
+  test "terminal backend manages terminal presentation sequences" do
+    {:ok, device} = StringIO.open("")
+
+    assert {:ok, app} =
+             Cringe.Test.start(Counter,
+               backend: {Cringe.Runtime.Backend.Terminal, device: device, alternate_screen: true}
+             )
+
+    assert :ok = Cringe.Runtime.paint(app)
+    assert :ok = GenServer.stop(app)
+    assert {_input, output} = StringIO.contents(device)
+
+    assert output =~ "\e[?1049h"
+    assert output =~ "\e[?25l"
+    assert output =~ "Count: 0"
+    assert output =~ "\e[?25h"
+    assert output =~ "\e[?1049l"
+  end
 end
