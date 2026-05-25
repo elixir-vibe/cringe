@@ -12,7 +12,7 @@ defmodule Cringe.Layout do
 
   @spec resize_block([String.t()], keyword()) :: [String.t()]
   def resize_block(lines, opts) do
-    width = Keyword.get(opts, :width)
+    width = constrained_width(lines, opts)
     height = Keyword.get(opts, :height)
     align = Keyword.get(opts, :align, :left)
 
@@ -43,6 +43,18 @@ defmodule Cringe.Layout do
     end
   end
 
+  defp constrained_width(lines, opts) do
+    if Keyword.has_key?(opts, :width) or Keyword.has_key?(opts, :min_width) or
+         Keyword.has_key?(opts, :max_width) do
+      natural = block_width(lines)
+
+      opts
+      |> Keyword.get(:width, natural)
+      |> max(Keyword.get(opts, :min_width, 0))
+      |> cap_width(Keyword.get(opts, :max_width, :infinity))
+    end
+  end
+
   defp maybe_resize_width(lines, nil, _align), do: lines
   defp maybe_resize_width(lines, width, align), do: resize_width(lines, width, align)
 
@@ -58,6 +70,9 @@ defmodule Cringe.Layout do
     width = block_width(lines)
     lines ++ List.duplicate(String.duplicate(" ", width), max(height - length(lines), 0))
   end
+
+  defp cap_width(width, :infinity), do: width
+  defp cap_width(width, max_width), do: min(width, max_width)
 
   defp pad_aligned(line, padding, :right), do: String.duplicate(" ", padding) <> line
 

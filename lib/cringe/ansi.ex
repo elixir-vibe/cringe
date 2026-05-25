@@ -1,6 +1,8 @@
 defmodule Cringe.ANSI do
   @moduledoc false
 
+  @escape_pattern ~r/\e\[[0-9;]*m/
+
   @colors %{
     black: 30,
     red: 31,
@@ -24,6 +26,9 @@ defmodule Cringe.ANSI do
       _ -> ["\e[", Enum.join(codes, ";"), "m", text, "\e[0m"] |> IO.iodata_to_binary()
     end
   end
+
+  @spec strip(String.t()) :: String.t()
+  def strip(text) when is_binary(text), do: Regex.replace(@escape_pattern, text, "")
 
   defp codes(opts) do
     []

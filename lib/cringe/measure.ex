@@ -2,11 +2,12 @@ defmodule Cringe.Measure do
   @moduledoc false
 
   @spec width(String.t()) :: non_neg_integer()
-  def width(text) when is_binary(text), do: String.length(text)
+  def width(text) when is_binary(text), do: text |> Cringe.ANSI.strip() |> String.length()
 
   @spec take(String.t(), non_neg_integer()) :: String.t()
   def take(text, width) when is_binary(text) and is_integer(width) and width >= 0 do
     text
+    |> Cringe.ANSI.strip()
     |> String.graphemes()
     |> Enum.take(width)
     |> Enum.join()

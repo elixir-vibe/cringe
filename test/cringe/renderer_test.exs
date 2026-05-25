@@ -2,6 +2,7 @@ defmodule Cringe.RendererTest do
   use ExUnit.Case, async: true
 
   import Cringe
+  import Cringe.Test, only: [assert_render: 2]
 
   test "renders text documents" do
     assert text("hello") |> render() == "hello"
@@ -31,7 +32,11 @@ defmodule Cringe.RendererTest do
         gap: 1
       )
 
-    assert render(document) == "one\n\ntwo"
+    assert_render(document, """
+    one
+
+    two
+    """)
   end
 
   test "renders horizontal stacks with aligned multiline children" do
@@ -44,19 +49,32 @@ defmodule Cringe.RendererTest do
         gap: 2
       )
 
-    assert render(document) == "a   ccc\nbb     "
+    assert_render(document, """
+    a   ccc
+    bb     
+    """)
   end
 
   test "renders rounded boxes" do
     document = text("hi") |> box(padding: 1)
 
-    assert render(document) == "╭────╮\n│    │\n│ hi │\n│    │\n╰────╯"
+    assert_render(document, """
+    ╭────╮
+    │    │
+    │ hi │
+    │    │
+    ╰────╯
+    """)
   end
 
   test "renders square boxes" do
     document = text("hi") |> box(border: :square)
 
-    assert render(document) == "+--+\n|hi|\n+--+"
+    assert_render(document, """
+    +--+
+    |hi|
+    +--+
+    """)
   end
 
   test "applies fixed width and alignment" do

@@ -107,10 +107,23 @@ defmodule Cringe.Renderer do
     total_grow = Enum.sum(grow)
 
     if total_grow > 0 do
-      Enum.zip_with(base, grow, &(&1 + div(extra * &2, total_grow)))
+      distribute_extra(base, grow, extra, total_grow)
     else
       base
     end
+  end
+
+  defp distribute_extra(base, grow, extra, total_grow) do
+    shares = Enum.map(grow, &div(extra * &1, total_grow))
+    used = Enum.sum(shares)
+    remainder = extra - used
+
+    base
+    |> Enum.zip(shares)
+    |> Enum.with_index()
+    |> Enum.map(fn {{width, share}, index} ->
+      width + share + if(index < remainder, do: 1, else: 0)
+    end)
   end
 
   defp pad_block_height(block, height) do

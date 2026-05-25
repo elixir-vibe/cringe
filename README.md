@@ -11,18 +11,14 @@ Early alpha skeleton. The API is not stable yet.
 ## First document
 
 ```elixir
-import Cringe
+use Cringe
 
-box(
-  column(
-    [
-      text("Cringe", color: :green, bold: true),
-      text("Terminal UI for the BEAM")
-    ],
-    gap: 1
-  ),
-  padding: 1
-)
+box padding: 1 do
+  column gap: 1 do
+    text("Cringe", color: :green, bold: true)
+    text("Terminal UI for the BEAM")
+  end
+end
 |> render(width: 80, ansi: true)
 |> IO.puts()
 ```
@@ -49,6 +45,7 @@ Run examples locally:
 mix run examples/hello.exs
 mix run examples/dashboard.exs
 mix run examples/layout.exs
+mix run examples/dsl.exs
 mix run examples/counter.exs
 ```
 

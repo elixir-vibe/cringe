@@ -6,7 +6,7 @@ defmodule Cringe do
   terminal frames. The API is intentionally small while the package is early.
   """
 
-  alias Cringe.Document.{Box, Stack, Text}
+  alias Cringe.Document.Text
 
   @doc """
   Builds a text node.
@@ -18,23 +18,15 @@ defmodule Cringe do
   @spec text(IO.chardata(), keyword()) :: Text.t()
   def text(content, opts \\ []), do: Text.new(content, opts)
 
-  @doc """
-  Builds a vertical stack.
-  """
-  @spec column([Cringe.Document.t()], keyword()) :: Stack.t()
-  def column(children, opts \\ []), do: Stack.new(children, :vertical, opts)
+  defmacro __using__(_opts) do
+    quote do
+      import Cringe
+    end
+  end
 
-  @doc """
-  Builds a horizontal stack.
-  """
-  @spec row([Cringe.Document.t()], keyword()) :: Stack.t()
-  def row(children, opts \\ []), do: Stack.new(children, :horizontal, opts)
-
-  @doc """
-  Builds a box around a document.
-  """
-  @spec box(Cringe.Document.t(), keyword()) :: Box.t()
-  def box(child, opts \\ []), do: Box.new(child, opts)
+  defmacro column(first \\ [], second \\ []), do: Cringe.DSL.column_ast(first, second)
+  defmacro row(first \\ [], second \\ []), do: Cringe.DSL.row_ast(first, second)
+  defmacro box(first \\ [], second \\ []), do: Cringe.DSL.box_ast(first, second)
 
   @doc """
   Renders a terminal document to a string.

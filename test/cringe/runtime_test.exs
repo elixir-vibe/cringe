@@ -1,6 +1,8 @@
 defmodule Cringe.RuntimeTest do
   use ExUnit.Case, async: true
 
+  import Cringe.Test, only: [assert_text: 2]
+
   defmodule Counter do
     use Cringe.App
 
@@ -16,9 +18,23 @@ defmodule Cringe.RuntimeTest do
 
   test "runs app lifecycle and dispatches events" do
     assert {:ok, app} = Cringe.Test.start(Counter)
-    assert Cringe.Test.text(app) =~ "Count: 0"
+
+    assert_text(app, """
+    ╭──────────╮
+    │          │
+    │ Count: 0 │
+    │          │
+    ╰──────────╯
+    """)
 
     assert :ok = Cringe.Test.key(app, :up)
-    assert Cringe.Test.text(app) =~ "Count: 1"
+
+    assert_text(app, """
+    ╭──────────╮
+    │          │
+    │ Count: 1 │
+    │          │
+    ╰──────────╯
+    """)
   end
 end
