@@ -9,7 +9,7 @@ defmodule Cringe.Runtime.Backend.Test do
   def init(_opts), do: {:ok, []}
 
   @impl true
-  def render(text, frames), do: {:ok, [text | frames]}
+  def render(text, frames), do: {:ok, [IO.iodata_to_binary(text) | frames]}
 
   @impl true
   def stop(_frames), do: :ok

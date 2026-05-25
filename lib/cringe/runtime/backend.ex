@@ -4,6 +4,6 @@ defmodule Cringe.Runtime.Backend do
   """
 
   @callback init(keyword()) :: {:ok, term()} | {:error, term()}
-  @callback render(String.t(), term()) :: {:ok, term()} | {:error, term()}
+  @callback render(IO.chardata(), term()) :: {:ok, term()} | {:error, term()}
   @callback stop(term()) :: :ok
 end

@@ -38,7 +38,7 @@ defmodule Cringe.RuntimeTest do
     """)
   end
 
-  test "paints rendered text to an IO backend" do
+  test "paints rendered text to an IO backend through the frame painter" do
     {:ok, device} = StringIO.open("")
 
     assert {:ok, app} =
@@ -49,7 +49,8 @@ defmodule Cringe.RuntimeTest do
     assert :ok = Cringe.Runtime.paint(app)
     assert {_input, output} = StringIO.contents(device)
 
-    assert output == Cringe.Runtime.text(app)
+    assert output =~ "\e[H\e[2J"
+    assert output =~ "Count: 0"
   end
 
   test "accepts a backend module without options" do
@@ -57,6 +58,28 @@ defmodule Cringe.RuntimeTest do
 
     assert :ok = Cringe.Runtime.paint(app)
     assert [output] = Cringe.Runtime.Backend.Test.frames(app)
-    assert output == Cringe.Runtime.text(app)
+    assert output =~ "\e[H\e[2J"
+    assert output =~ "Count: 0"
+  end
+
+  test "skips backend writes when a repaint has no changed lines" do
+    assert {:ok, app} = Cringe.Test.start(Counter, backend: Cringe.Runtime.Backend.Test)
+
+    assert :ok = Cringe.Runtime.paint(app)
+    assert :ok = Cringe.Runtime.paint(app)
+
+    assert [_first_output] = Cringe.Runtime.Backend.Test.frames(app)
+  end
+
+  test "subsequent paints write changed lines only" do
+    assert {:ok, app} = Cringe.Test.start(Counter, backend: Cringe.Runtime.Backend.Test)
+
+    assert :ok = Cringe.Runtime.paint(app)
+    assert :ok = Cringe.Test.key(app, :up)
+    assert :ok = Cringe.Runtime.paint(app)
+
+    assert [_first_output, next_output] = Cringe.Runtime.Backend.Test.frames(app)
+    assert next_output =~ "Count: 1"
+    refute next_output =~ "\e[H\e[2J"
   end
 end

@@ -5,11 +5,14 @@ defmodule Cringe.Runtime do
 
   use GenServer
 
+  @default_width 80
+  @default_height 24
+
   @type start_opt ::
           {:app, module()}
           | {:opts, keyword()}
           | {:name, GenServer.name()}
-          | {:backend, {module(), keyword()}}
+          | {:backend, module() | {module(), keyword()}}
           | Cringe.Renderer.render_opts()
 
   @spec start_link([start_opt()]) :: GenServer.on_start()
@@ -38,7 +41,7 @@ defmodule Cringe.Runtime do
     app = Keyword.fetch!(opts, :app)
     app_opts = Keyword.get(opts, :opts, [])
     {backend, backend_opts} = opts |> Keyword.get(:backend, {nil, []}) |> normalize_backend()
-    render_opts = Keyword.drop(opts, [:app, :opts, :backend])
+    render_opts = opts |> Keyword.drop([:app, :opts, :backend]) |> default_render_opts()
 
     with {:ok, app_state} <- app.init(app_opts),
          {:ok, backend_state} <- init_backend(backend, backend_opts) do
@@ -48,7 +51,8 @@ defmodule Cringe.Runtime do
          app_state: app_state,
          render_opts: render_opts,
          backend: backend,
-         backend_state: backend_state
+         backend_state: backend_state,
+         painter: new_painter(render_opts)
        }}
     else
       {:stop, reason} -> {:stop, reason}
@@ -68,9 +72,19 @@ defmodule Cringe.Runtime do
   def handle_call(:paint, _from, %{backend: nil} = state), do: {:reply, :ok, state}
 
   def handle_call(:paint, _from, %{backend: backend, backend_state: backend_state} = state) do
-    case backend.render(render_text(state), backend_state) do
-      {:ok, next_backend_state} -> {:reply, :ok, %{state | backend_state: next_backend_state}}
-      {:error, reason} -> {:reply, {:error, reason}, state}
+    {output, next_painter} = paint_output(state)
+    next_state = %{state | painter: next_painter}
+
+    if output == [] do
+      {:reply, :ok, next_state}
+    else
+      case backend.render(output, backend_state) do
+        {:ok, next_backend_state} ->
+          {:reply, :ok, %{next_state | backend_state: next_backend_state}}
+
+        {:error, reason} ->
+          {:reply, {:error, reason}, state}
+      end
     end
   end
 
@@ -93,7 +107,22 @@ defmodule Cringe.Runtime do
   defp init_backend(nil, _opts), do: {:ok, nil}
   defp init_backend(backend, opts), do: backend.init(opts)
 
+  defp default_render_opts(opts) do
+    opts
+    |> Keyword.put_new(:width, @default_width)
+    |> Keyword.put_new(:height, @default_height)
+  end
+
+  defp new_painter(opts) do
+    Cringe.Painter.new(Keyword.fetch!(opts, :width), Keyword.fetch!(opts, :height))
+  end
+
   defp render_text(%{app: app, app_state: app_state, render_opts: render_opts}) do
     app_state |> app.render() |> Cringe.render(render_opts)
+  end
+
+  defp paint_output(%{app: app, app_state: app_state, render_opts: render_opts, painter: painter}) do
+    frame = app_state |> app.render() |> Cringe.frame(render_opts)
+    Cringe.Painter.render(painter, frame)
   end
 end
