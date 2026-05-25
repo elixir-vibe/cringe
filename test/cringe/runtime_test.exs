@@ -37,4 +37,26 @@ defmodule Cringe.RuntimeTest do
     ╰──────────╯
     """)
   end
+
+  test "paints rendered text to an IO backend" do
+    {:ok, device} = StringIO.open("")
+
+    assert {:ok, app} =
+             Cringe.Test.start(Counter,
+               backend: {Cringe.Runtime.Backend.IO, device: device}
+             )
+
+    assert :ok = Cringe.Runtime.paint(app)
+    assert {_input, output} = StringIO.contents(device)
+
+    assert output == Cringe.Runtime.text(app)
+  end
+
+  test "accepts a backend module without options" do
+    assert {:ok, app} = Cringe.Test.start(Counter, backend: Cringe.Runtime.Backend.Test)
+
+    assert :ok = Cringe.Runtime.paint(app)
+    assert [output] = Cringe.Runtime.Backend.Test.frames(app)
+    assert output == Cringe.Runtime.text(app)
+  end
 end

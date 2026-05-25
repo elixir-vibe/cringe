@@ -37,7 +37,7 @@ defmodule Cringe.Runtime do
   def init(opts) do
     app = Keyword.fetch!(opts, :app)
     app_opts = Keyword.get(opts, :opts, [])
-    {backend, backend_opts} = Keyword.get(opts, :backend, {nil, []})
+    {backend, backend_opts} = opts |> Keyword.get(:backend, {nil, []}) |> normalize_backend()
     render_opts = Keyword.drop(opts, [:app, :opts, :backend])
 
     with {:ok, app_state} <- app.init(app_opts),
@@ -84,6 +84,11 @@ defmodule Cringe.Runtime do
 
   def terminate(_reason, %{backend: backend, backend_state: backend_state}),
     do: backend.stop(backend_state)
+
+  defp normalize_backend({backend, opts}) when is_atom(backend) and is_list(opts),
+    do: {backend, opts}
+
+  defp normalize_backend(backend) when is_atom(backend), do: {backend, []}
 
   defp init_backend(nil, _opts), do: {:ok, nil}
   defp init_backend(backend, opts), do: backend.init(opts)
