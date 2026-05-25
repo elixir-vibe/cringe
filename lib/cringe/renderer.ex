@@ -3,40 +3,53 @@ defmodule Cringe.Renderer do
   Renders Cringe documents into terminal text.
   """
 
+  alias Cringe.ANSI
   alias Cringe.Document.{Box, Stack, Text}
+  alias Cringe.Frame
   alias Cringe.Measure
 
-  @type render_opts :: [width: pos_integer(), height: pos_integer()]
+  @type render_opts :: [width: pos_integer(), height: pos_integer(), ansi: boolean()]
 
   @spec render(Cringe.Document.t(), render_opts()) :: String.t()
   def render(document, opts \\ []) do
+    document
+    |> frame(opts)
+    |> Frame.text()
+  end
+
+  @spec frame(Cringe.Document.t(), render_opts()) :: Frame.t()
+  def frame(document, opts \\ []) do
     width = Keyword.get(opts, :width)
     height = Keyword.get(opts, :height)
+    ansi? = Keyword.get(opts, :ansi, false)
 
     document
-    |> lines()
+    |> lines(ansi?)
     |> maybe_clip_height(height)
-    |> Enum.map_join("\n", &maybe_clip_width(&1, width))
+    |> Enum.map(&maybe_clip_width(&1, width))
+    |> Frame.new()
   end
 
-  defp lines(%Text{content: content}) do
-    String.split(content, "\n", trim: false)
+  defp lines(%Text{content: content, opts: opts}, ansi?) do
+    content
+    |> String.split("\n", trim: false)
+    |> Enum.map(&ANSI.apply(&1, opts, ansi?))
   end
 
-  defp lines(%Stack{direction: :vertical, children: children, opts: opts}) do
+  defp lines(%Stack{direction: :vertical, children: children, opts: opts}, ansi?) do
     gap = Keyword.get(opts, :gap, 0)
     separator = List.duplicate("", gap)
 
     children
-    |> Enum.map(&lines/1)
+    |> Enum.map(&lines(&1, ansi?))
     |> Enum.reject(&(&1 == []))
     |> join_blocks(separator)
   end
 
-  defp lines(%Stack{direction: :horizontal, children: children, opts: opts}) do
+  defp lines(%Stack{direction: :horizontal, children: children, opts: opts}, ansi?) do
     gap = Keyword.get(opts, :gap, 0)
     separator = String.duplicate(" ", gap)
-    blocks = Enum.map(children, &lines/1)
+    blocks = Enum.map(children, &lines(&1, ansi?))
     height = blocks |> Enum.map(&length/1) |> Enum.max(fn -> 0 end)
 
     blocks
@@ -46,10 +59,10 @@ defmodule Cringe.Renderer do
     |> join_rows(separator)
   end
 
-  defp lines(%Box{child: child, opts: opts}) do
+  defp lines(%Box{child: child, opts: opts}, ansi?) do
     padding = Keyword.get(opts, :padding, 0)
     border = Keyword.get(opts, :border, :rounded)
-    content = child |> lines() |> pad_block(padding)
+    content = child |> lines(ansi?) |> pad_block(padding)
 
     case border do
       false -> content

@@ -1,0 +1,26 @@
+defmodule Cringe.PainterTest do
+  use ExUnit.Case, async: true
+
+  test "first paint clears and writes all lines" do
+    painter = Cringe.Painter.new(20, 5)
+    {output, painter} = Cringe.Painter.render(painter, Cringe.text("one\ntwo"))
+
+    text = IO.iodata_to_binary(output)
+    assert text =~ "\e[H\e[2J"
+    assert text =~ "one"
+    assert text =~ "two"
+    assert painter.previous == ["one", "two"]
+  end
+
+  test "subsequent paints write changed lines only" do
+    painter = Cringe.Painter.new(20, 5)
+    {_output, painter} = Cringe.Painter.render(painter, Cringe.text("one\ntwo"))
+    {output, painter} = Cringe.Painter.render(painter, Cringe.text("one\nthree"))
+
+    text = IO.iodata_to_binary(output)
+    assert text =~ "\e[2;1H"
+    assert text =~ "three"
+    refute text =~ "\e[1;1H"
+    assert painter.previous == ["one", "three"]
+  end
+end

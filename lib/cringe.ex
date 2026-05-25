@@ -45,4 +45,16 @@ defmodule Cringe do
   """
   @spec render(Cringe.Document.t(), Cringe.Renderer.render_opts()) :: String.t()
   def render(document, opts \\ []), do: Cringe.Renderer.render(document, opts)
+
+  @doc """
+  Renders a terminal document to a frame.
+  """
+  @spec frame(Cringe.Document.t(), Cringe.Renderer.render_opts()) :: Cringe.Frame.t()
+  def frame(document, opts \\ []), do: Cringe.Renderer.frame(document, opts)
+
+  @doc """
+  Starts a supervised Cringe runtime.
+  """
+  @spec run(module(), keyword()) :: GenServer.on_start()
+  def run(app, opts \\ []), do: Cringe.Runtime.start_link(Keyword.put(opts, :app, app))
 end
