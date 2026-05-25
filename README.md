@@ -8,6 +8,20 @@ Cringe is an experiment in building interactive terminal apps with declarative l
 
 Early skeleton. The API is not stable yet.
 
+## First document
+
+```elixir
+Cringe.text("Cringe\nTerminal UI for the BEAM")
+|> Cringe.render(width: 80)
+|> IO.puts()
+```
+
+Run it locally:
+
+```sh
+mix run examples/hello.exs
+```
+
 ## Installation
 
 Once published, add `cringe` to your dependencies:
