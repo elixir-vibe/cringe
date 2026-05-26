@@ -18,8 +18,10 @@ defmodule Cringe.RendererTest do
     assert render(document, height: 2) == "one\ntwo"
   end
 
-  test "clips by grapheme" do
-    assert text("🥲 cringe") |> render(width: 3) == "🥲 c"
+  test "clips by terminal cell width" do
+    assert text("🥲 cringe") |> render(width: 3) == "🥲 "
+    assert text("ab🚀cd") |> render(width: 4) == "ab🚀"
+    assert text("ab🚀cd") |> render(width: 3) == "ab "
   end
 
   test "renders vertical stacks with gaps" do
