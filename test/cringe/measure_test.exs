@@ -38,6 +38,16 @@ defmodule Cringe.MeasureTest do
     assert Measure.fit("ab🚀cd", 4, ellipsis?: true) == "ab…"
   end
 
+  test "chunks text by terminal cells" do
+    assert Measure.chunks("a🚀b東c", 3) == ["a🚀", "b東", "c"]
+  end
+
+  test "wraps text by terminal cells" do
+    assert Measure.wrap("hello world", 5) == ["hello", "world"]
+    assert Measure.wrap("a🚀b東c", 3) == ["a🚀", "b東", "c"]
+    assert Measure.wrap("one\ntwo", 10) == ["one", "two"]
+  end
+
   test "drops text by terminal cells" do
     assert Measure.drop("ab🚀cd", 4) == "cd"
     assert Measure.drop("ab🚀cd", 3) == "cd"

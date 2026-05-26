@@ -122,6 +122,51 @@ defmodule Cringe.Measure do
   end
 
   @doc """
+  Splits text into chunks no wider than `width` terminal cells.
+
+      iex> Cringe.Measure.chunks("a🚀b東c", 3)
+      ["a🚀", "b東", "c"]
+
+  """
+  @spec chunks(String.t(), pos_integer()) :: [String.t()]
+  def chunks(text, width) when is_binary(text) and is_integer(width) and width > 0 do
+    text
+    |> Cringe.ANSI.strip()
+    |> String.graphemes()
+    |> Enum.reduce({[], "", 0}, fn grapheme, {chunks, current, current_width} ->
+      grapheme_width = grapheme_width(grapheme)
+
+      if current != "" and current_width + grapheme_width > width do
+        {[current | chunks], grapheme, grapheme_width}
+      else
+        {chunks, IO.iodata_to_binary([current, grapheme]), current_width + grapheme_width}
+      end
+    end)
+    |> then(fn {chunks, current, _width} -> Enum.reverse([current | chunks]) end)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  @doc """
+  Wraps text to a terminal-cell width.
+
+  Existing newlines are preserved as line boundaries. Lines containing spaces are
+  word-wrapped; long words are split with `chunks/2`.
+
+      iex> Cringe.Measure.wrap("hello world", 5)
+      ["hello", "world"]
+
+      iex> Cringe.Measure.wrap("a🚀b東c", 3)
+      ["a🚀", "b東", "c"]
+
+  """
+  @spec wrap(String.t(), pos_integer()) :: [String.t()]
+  def wrap(text, width) when is_binary(text) and is_integer(width) and width > 0 do
+    text
+    |> String.split("\n")
+    |> Enum.flat_map(&wrap_line(&1, width))
+  end
+
+  @doc """
   Drops text until at least `count` terminal cells are removed.
 
   ANSI styling is stripped from the result.
@@ -138,6 +183,51 @@ defmodule Cringe.Measure do
     text
     |> Cringe.ANSI.strip()
     |> do_drop(count, 0, [])
+  end
+
+  defp wrap_line("", _width), do: [""]
+
+  defp wrap_line(line, width) do
+    cond do
+      width(line) <= width ->
+        [line]
+
+      String.contains?(line, " ") ->
+        word_wrap(line, width)
+
+      true ->
+        chunks(line, width)
+    end
+  end
+
+  defp word_wrap(line, width) do
+    line
+    |> String.split(~r/(\s+)/, include_captures: true, trim: true)
+    |> Enum.flat_map(&split_long_wrap_part(&1, width))
+    |> Enum.reduce([""], fn part, [current | rest] ->
+      candidate = IO.iodata_to_binary([current, part])
+
+      cond do
+        String.trim(current) == "" ->
+          [String.trim_leading(part) | rest]
+
+        width(candidate) <= width ->
+          [candidate | rest]
+
+        true ->
+          [String.trim_leading(part), String.trim_trailing(current) | rest]
+      end
+    end)
+    |> Enum.reverse()
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  defp split_long_wrap_part(part, width) do
+    if String.trim(part) == "" or width(part) <= width do
+      [part]
+    else
+      chunks(part, width)
+    end
   end
 
   defp take_ansi(_text, width, visible, acc, active_sgr) when visible >= width do
