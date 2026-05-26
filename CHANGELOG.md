@@ -6,6 +6,8 @@
 - Preserve active ANSI SGR styling in `Cringe.Measure.take/2`.
 - Let `Cringe.Painter` manage terminal cursor visibility from frame cursor state.
 - Extract layout-node drawing into `Cringe.Renderer.Draw`.
+- Add document IDs, layout node lookup, and coordinate hit testing.
+- Add runtime tick events with configured intervals.
 
 ## 0.2.0 (2026-05-26)
 

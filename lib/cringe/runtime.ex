@@ -16,6 +16,7 @@ defmodule Cringe.Runtime do
           | {:opts, keyword()}
           | {:name, GenServer.name()}
           | {:backend, module() | {module(), keyword()}}
+          | {:ticks, keyword(pos_integer())}
           | Cringe.Renderer.render_opts()
 
   @spec start_link([start_opt()]) :: GenServer.on_start()
@@ -50,7 +51,8 @@ defmodule Cringe.Runtime do
     app = Keyword.fetch!(opts, :app)
     app_opts = Keyword.get(opts, :opts, [])
     {backend, backend_opts} = opts |> Keyword.get(:backend, {nil, []}) |> normalize_backend()
-    text_opts = Keyword.drop(opts, [:app, :opts, :backend])
+    ticks = Keyword.get(opts, :ticks, [])
+    text_opts = Keyword.drop(opts, [:app, :opts, :backend, :ticks])
     render_opts = default_render_opts(text_opts)
 
     with {:ok, app_state} <- app.init(app_opts),
@@ -63,7 +65,8 @@ defmodule Cringe.Runtime do
          text_opts: text_opts,
          backend: backend,
          backend_state: backend_state,
-         painter: new_painter(render_opts)
+         painter: new_painter(render_opts),
+         ticks: start_ticks(ticks)
        }}
     else
       {:stop, reason} -> {:stop, reason}
@@ -122,6 +125,12 @@ defmodule Cringe.Runtime do
   end
 
   def handle_info({Ghostty.TTY, _tty, :eof}, state), do: {:stop, :normal, state}
+
+  def handle_info({:tick, id}, %{ticks: ticks} = state) do
+    state = schedule_tick(state, id, Map.fetch!(ticks, id))
+    handle_terminal_event(Event.tick(id), state)
+  end
+
   def handle_info(_message, state), do: {:noreply, state}
 
   @impl GenServer
@@ -137,6 +146,21 @@ defmodule Cringe.Runtime do
 
   defp init_backend(nil, _opts), do: {:ok, nil}
   defp init_backend(backend, opts), do: backend.init(opts)
+
+  defp start_ticks(ticks) do
+    ticks
+    |> Map.new()
+    |> tap(fn intervals ->
+      Enum.each(intervals, fn {id, interval} -> send_tick(id, interval) end)
+    end)
+  end
+
+  defp schedule_tick(%{ticks: ticks} = state, id, interval) do
+    if Map.has_key?(ticks, id), do: send_tick(id, interval)
+    state
+  end
+
+  defp send_tick(id, interval), do: Process.send_after(self(), {:tick, id}, interval)
 
   defp dispatch_event(%{app: app, app_state: app_state} = state, event) do
     case app.handle_event(event, app_state) do

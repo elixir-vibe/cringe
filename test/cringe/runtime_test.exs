@@ -20,6 +20,9 @@ defmodule Cringe.RuntimeTest do
     def handle_event(%Cringe.Event.Resize{} = event, state),
       do: {:noreply, Map.put(state, :last_resize, event)}
 
+    def handle_event(%Cringe.Event.Tick{id: id}, state),
+      do: {:noreply, Map.update(state, {:tick, id}, 1, &(&1 + 1))}
+
     @impl true
     def render(state), do: box(text("Count: #{state.count}"), padding: 1)
   end
@@ -136,6 +139,13 @@ defmodule Cringe.RuntimeTest do
 
     assert eventually(fn -> Test.frames(app) != [] end)
     assert [%{width: 12, height: 4}] = [Runtime.state(app) |> Map.get(:last_resize)]
+  end
+
+  test "dispatches configured tick events and repaints" do
+    assert {:ok, app} = Driver.start(Counter, backend: Test, ticks: [spinner: 10])
+
+    assert eventually(fn -> Runtime.state(app)[{:tick, :spinner}] end)
+    assert Test.frames(app) != []
   end
 
   defp eventually(fun, attempts \\ 20)

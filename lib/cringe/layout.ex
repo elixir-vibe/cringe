@@ -1,6 +1,7 @@
 defmodule Cringe.Layout do
   @moduledoc false
 
+  alias Cringe.Layout.Node
   alias Cringe.Measure
 
   @spec block_width([String.t()]) :: non_neg_integer()
@@ -8,6 +9,17 @@ defmodule Cringe.Layout do
     lines
     |> Enum.map(&Measure.width/1)
     |> Enum.max(fn -> 0 end)
+  end
+
+  @spec find(Node.t(), term()) :: Node.t() | nil
+  def find(%Node{id: id} = node, id), do: node
+  def find(%Node{children: children}, id), do: Enum.find_value(children, &find(&1, id))
+
+  @spec at(Node.t(), non_neg_integer(), non_neg_integer()) :: Node.t() | nil
+  def at(%Node{} = node, x, y) when is_integer(x) and is_integer(y) do
+    if contains?(node.rect, x, y) do
+      Enum.find_value(node.children, &at(&1, x - node.rect.x, y - node.rect.y)) || node
+    end
   end
 
   @spec resize_block([String.t()], keyword()) :: [String.t()]
@@ -41,6 +53,10 @@ defmodule Cringe.Layout do
       true ->
         pad_aligned(line, width - line_width, align)
     end
+  end
+
+  defp contains?(rect, x, y) do
+    x >= rect.x and x < rect.x + rect.width and y >= rect.y and y < rect.y + rect.height
   end
 
   defp constrained_width(lines, opts) do
