@@ -8,6 +8,7 @@
 - Extract layout-node drawing into `Cringe.Renderer.Draw`.
 - Add document IDs, layout node lookup, and coordinate hit testing.
 - Add runtime tick events with configured intervals.
+- Add ticking spinner example.
 
 ## 0.2.0 (2026-05-26)
 
