@@ -35,4 +35,11 @@ defmodule Cringe.Renderer.DrawTest do
 
     assert frame.lines == ["one  ", "     ", "two  "]
   end
+
+  test "draws text from document content and layout geometry" do
+    node = Engine.layout(text("hello", width: 3))
+    node = %{node | lines: ["xxx"]}
+
+    assert Draw.frame(node).lines == ["hel"]
+  end
 end

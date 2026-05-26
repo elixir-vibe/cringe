@@ -7,6 +7,7 @@ defmodule Cringe.Renderer.Draw do
   alias Cringe.Canvas
   alias Cringe.Document.{Box, Stack, Text}
   alias Cringe.Frame
+  alias Cringe.Layout
   alias Cringe.Layout.Node
   alias Cringe.Rect
   alias Cringe.Renderer.Draw.Box, as: BoxDraw
@@ -27,9 +28,19 @@ defmodule Cringe.Renderer.Draw do
     draw_at(canvas, node, {node.rect.x, node.rect.y}, opts)
   end
 
-  defp draw_at(%Canvas{} = canvas, %Node{document: %Text{opts: text_opts}} = node, {x, y}, opts) do
+  defp draw_at(
+         %Canvas{} = canvas,
+         %Node{document: %Text{content: content, opts: text_opts}} = node,
+         {x, y},
+         opts
+       ) do
     ansi? = Keyword.get(opts, :ansi, false)
-    lines = Enum.map(node.lines, &ANSI.apply(&1, text_opts, ansi?))
+
+    lines =
+      content
+      |> String.split("\n", trim: false)
+      |> Layout.resize_block(text_draw_opts(text_opts, node))
+      |> Enum.map(&ANSI.apply(&1, text_opts, ansi?))
 
     put_block(canvas, x, y, lines, opts)
   end
@@ -58,6 +69,12 @@ defmodule Cringe.Renderer.Draw do
     Enum.reduce(node.children, canvas, fn child, acc ->
       draw_at(acc, child, {x + child.rect.x, y + child.rect.y}, opts)
     end)
+  end
+
+  defp text_draw_opts(text_opts, node) do
+    text_opts
+    |> Keyword.put(:width, node.rect.width)
+    |> Keyword.put(:height, node.rect.height)
   end
 
   defp box_clip(rect, opts) do
