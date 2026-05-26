@@ -16,6 +16,15 @@ defmodule Cringe.Canvas do
   end
 
   @spec put(t(), non_neg_integer(), non_neg_integer(), String.t()) :: t()
+  def put(%__MODULE__{} = canvas, 0, y, text)
+      when is_integer(y) and y >= 0 and is_binary(text) do
+    if y < canvas.height do
+      update_line(canvas, y, fn _line -> fit_line(text, canvas.width) end)
+    else
+      canvas
+    end
+  end
+
   def put(%__MODULE__{} = canvas, x, y, text)
       when is_integer(x) and x >= 0 and is_integer(y) and y >= 0 and is_binary(text) do
     if y < canvas.height and x < canvas.width do
@@ -26,6 +35,20 @@ defmodule Cringe.Canvas do
   end
 
   @spec put_block(t(), non_neg_integer(), non_neg_integer(), [String.t()]) :: t()
+  def put_block(%__MODULE__{} = canvas, 0, y, lines)
+      when is_integer(y) and y >= 0 and is_list(lines) do
+    if y < canvas.height do
+      replacements =
+        lines
+        |> Enum.take(canvas.height - y)
+        |> Enum.map(&fit_line(&1, canvas.width))
+
+      %{canvas | lines: replace_lines(canvas.lines, y, replacements)}
+    else
+      canvas
+    end
+  end
+
   def put_block(%__MODULE__{} = canvas, x, y, lines) when is_list(lines) do
     lines
     |> Enum.with_index(y)
@@ -38,6 +61,17 @@ defmodule Cringe.Canvas do
   defp update_line(canvas, y, fun) do
     lines = List.update_at(canvas.lines, y, fun)
     %{canvas | lines: lines}
+  end
+
+  defp replace_lines(lines, y, replacements) do
+    {prefix, rest} = Enum.split(lines, y)
+    prefix ++ replacements ++ Enum.drop(rest, length(replacements))
+  end
+
+  defp fit_line(text, width) do
+    text
+    |> take_ansi_prefix(width)
+    |> Measure.pad(width)
   end
 
   defp put_text(line, x, text, width) do
