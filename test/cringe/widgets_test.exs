@@ -5,6 +5,7 @@ defmodule Cringe.WidgetsTest do
   import Cringe.Test, only: [assert_render: 2]
 
   alias Cringe.Widgets.Input
+  alias Cringe.Widgets.Input.State
 
   test "renders progress bars" do
     assert_render(progress(value: 0.5, width: 4), """
@@ -24,10 +25,23 @@ defmodule Cringe.WidgetsTest do
     assert frame(input(value: "abc", focused: true, width: 7)).cursor == {1, 6}
   end
 
+  test "input fields position cursors from input state" do
+    state = State.new("abc", cursor: 1)
+
+    assert frame(input(state: state, focused: true, width: 7)).cursor == {1, 4}
+  end
+
   test "updates input values from text and backspace events" do
     assert Input.update("ab", Cringe.Event.text("c")) == {:ok, "abc"}
     assert Input.update("ab", Cringe.Event.key(:backspace)) == {:ok, "a"}
     assert Input.update("ab", Cringe.Event.key(:enter)) == :ignored
+  end
+
+  test "updates cursor-aware input state" do
+    state = State.new("ac", cursor: 1)
+
+    assert Input.update(state, Cringe.Event.text("b")) == {:ok, State.new("abc", cursor: 2)}
+    assert Input.update(state, Cringe.Event.key(:right)) == {:ok, State.new("ac", cursor: 2)}
   end
 
   test "renders select lists" do

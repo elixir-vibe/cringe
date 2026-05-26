@@ -6,11 +6,13 @@ defmodule Cringe.Widgets.Input do
   alias Cringe.Event.Key
   alias Cringe.Event.Text
   alias Cringe.Measure
+  alias Cringe.Widgets.Input.State
 
   @spec new(keyword()) :: Cringe.Document.t()
   def new(opts \\ []) do
     opts = Cringe.Theme.input(opts)
-    value = Keyword.get(opts, :value, "")
+    state = state_from_opts(opts)
+    value = state.value
     placeholder = Keyword.get(opts, :placeholder, "")
     focused? = Keyword.get(opts, :focused, false)
     width = Keyword.get(opts, :width, 20)
@@ -26,29 +28,47 @@ defmodule Cringe.Widgets.Input do
       opts
       |> Keyword.drop([:value, :placeholder, :focused, :width, :prompt, :placeholder_color])
       |> maybe_put(:color, color)
-      |> maybe_put(:cursor, cursor(focused?, prompt, value))
+      |> maybe_put(:cursor, cursor(focused?, prompt, state))
 
     Cringe.text(prompt <> visible_value, Keyword.put(text_opts, :width, width))
   end
 
-  @spec update(String.t(), Cringe.Event.t()) :: {:ok, String.t()} | :ignored
-  def update(value, %Text{text: text}) when is_binary(value), do: {:ok, value <> text}
-  def update(value, %Key{key: :backspace}) when is_binary(value), do: {:ok, trim_last(value)}
-  def update(_value, _event), do: :ignored
+  @spec update(String.t() | State.t(), Cringe.Event.t()) ::
+          {:ok, String.t() | State.t()} | :ignored
+  def update(%State{} = state, %Text{text: text}), do: {:ok, State.insert(state, text)}
+  def update(%State{} = state, %Key{key: :backspace}), do: {:ok, State.backspace(state)}
+  def update(%State{} = state, %Key{key: :delete}), do: {:ok, State.delete(state)}
+  def update(%State{} = state, %Key{key: :left}), do: {:ok, State.move(state, -1)}
+  def update(%State{} = state, %Key{key: :right}), do: {:ok, State.move(state, 1)}
+  def update(%State{} = state, %Key{key: :home}), do: {:ok, State.home(state)}
+  def update(%State{} = state, %Key{key: :end}), do: {:ok, State.end_of_line(state)}
 
-  defp cursor(false, _prompt, _value), do: nil
-
-  defp cursor(true, prompt, value) do
-    {1, Measure.width(prompt <> value) + 1}
+  def update(value, event) when is_binary(value) do
+    case update(State.new(value), event) do
+      {:ok, %State{} = state} -> {:ok, State.value(state)}
+      :ignored -> :ignored
+    end
   end
 
-  defp trim_last(""), do: ""
+  def update(_value, _event), do: :ignored
 
-  defp trim_last(value) do
-    value
-    |> String.graphemes()
-    |> Enum.drop(-1)
-    |> Enum.join()
+  defp state_from_opts(opts) do
+    case Keyword.get(opts, :state) do
+      %State{} = state -> state
+      nil -> State.new(Keyword.get(opts, :value, ""), cursor: Keyword.get(opts, :cursor))
+    end
+  end
+
+  defp cursor(false, _prompt, _state), do: nil
+
+  defp cursor(true, prompt, %State{} = state) do
+    value_before_cursor =
+      state.value
+      |> String.graphemes()
+      |> Enum.take(state.cursor)
+      |> Enum.join()
+
+    {1, Measure.width(prompt <> value_before_cursor) + 1}
   end
 
   defp maybe_put(opts, _key, nil), do: opts
