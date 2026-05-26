@@ -165,6 +165,22 @@ Cringe.Focus.focused?(focus, :email)
 
 The form example shows this with inputs and selects.
 
+## Architecture
+
+Cringe keeps each terminal UI stage explicit:
+
+```text
+Document -> Layout.Node tree -> Draw/Canvas -> Frame -> Painter -> Backend
+```
+
+- Documents are plain Elixir structs built with functions or the DSL.
+- Layout computes positioned nodes, sizes, content rectangles, cursors, and hit regions.
+- Draw turns the layout tree into a fixed-size canvas and frame.
+- The painter compares frames and emits terminal updates.
+- Backends write updates to tests, IO devices, or the current terminal.
+
+This split keeps app state semantic and makes rendering deterministic in tests.
+
 ## Testing
 
 Cringe test helpers keep expected terminal output readable in normal ExUnit assertions:
@@ -191,9 +207,13 @@ For apps:
 
 ```elixir
 {:ok, app} = Cringe.Driver.start(Counter)
-Cringe.Driver.key(app, :up)
+Cringe.Driver.keys(app, [:up, :up])
+
+assert Cringe.Driver.await_state(app, &(&1.count == 2))
 assert_app_text(app, "...")
 ```
+
+`Cringe.Driver.await_frame/3` is useful when testing async terminal input, resize, or tick-driven repaint behavior.
 
 ## Examples
 

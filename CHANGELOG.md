@@ -10,6 +10,7 @@
 - Add runtime tick events with configured intervals.
 - Add ticking spinner example.
 - Move ANSI text styling into the draw phase for styled text overlays.
+- Add app driver helpers for key sequences and deterministic awaits.
 
 ## 0.2.0 (2026-05-26)
 

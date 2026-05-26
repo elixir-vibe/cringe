@@ -127,7 +127,7 @@ defmodule Cringe.RuntimeTest do
 
     send(app, {Ghostty.TTY, self(), {:key, %Ghostty.KeyEvent{action: :press, key: :arrow_up}}})
 
-    assert eventually(fn -> Runtime.state(app).count == 1 end)
+    assert Driver.await_state(app, &(&1.count == 1))
     assert [output] = Test.frames(app)
     assert output =~ "Count: 1"
   end
@@ -137,27 +137,21 @@ defmodule Cringe.RuntimeTest do
 
     send(app, {Ghostty.TTY, self(), {:resize, 12, 4}})
 
-    assert eventually(fn -> Test.frames(app) != [] end)
+    assert Driver.await_frame(app, &String.contains?(&1, "Count"))
     assert [%{width: 12, height: 4}] = [Runtime.state(app) |> Map.get(:last_resize)]
   end
 
   test "dispatches configured tick events and repaints" do
     assert {:ok, app} = Driver.start(Counter, backend: Test, ticks: [spinner: 10])
 
-    assert eventually(fn -> Runtime.state(app)[{:tick, :spinner}] end)
+    assert Driver.await_state(app, & &1[{:tick, :spinner}])
     assert Test.frames(app) != []
   end
 
-  defp eventually(fun, attempts \\ 20)
+  test "driver dispatches key sequences" do
+    assert {:ok, app} = Driver.start(Counter)
 
-  defp eventually(fun, attempts) when attempts > 0 do
-    if fun.() do
-      true
-    else
-      Process.sleep(5)
-      eventually(fun, attempts - 1)
-    end
+    assert :ok = Driver.keys(app, [:up, :up])
+    assert Runtime.state(app).count == 2
   end
-
-  defp eventually(_fun, 0), do: false
 end
