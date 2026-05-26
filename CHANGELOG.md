@@ -21,6 +21,7 @@
 - Draw boxes recursively from layout geometry with clipped overflow.
 - Stop composing child content into stack and box layout lines.
 - Draw text from document content and layout geometry.
+- Move repeating runtime ticks into a tick manager process.
 
 ## 0.2.0 (2026-05-26)
 

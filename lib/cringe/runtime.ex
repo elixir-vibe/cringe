@@ -6,6 +6,7 @@ defmodule Cringe.Runtime do
   use GenServer
 
   alias Cringe.Event
+  alias Cringe.Runtime.TickManager
   alias Cringe.Terminal.KeyDecoder
 
   @default_width 80
@@ -66,7 +67,7 @@ defmodule Cringe.Runtime do
          backend: backend,
          backend_state: backend_state,
          painter: new_painter(render_opts),
-         ticks: start_ticks(ticks)
+         tick_manager: start_tick_manager(ticks)
        }}
     else
       {:stop, reason} -> {:stop, reason}
@@ -126,8 +127,7 @@ defmodule Cringe.Runtime do
 
   def handle_info({Ghostty.TTY, _tty, :eof}, state), do: {:stop, :normal, state}
 
-  def handle_info({:tick, id}, %{ticks: ticks} = state) do
-    state = schedule_tick(state, id, Map.fetch!(ticks, id))
+  def handle_info({:tick, id}, state) do
     handle_terminal_event(Event.tick(id), state)
   end
 
@@ -147,20 +147,12 @@ defmodule Cringe.Runtime do
   defp init_backend(nil, _opts), do: {:ok, nil}
   defp init_backend(backend, opts), do: backend.init(opts)
 
-  defp start_ticks(ticks) do
-    ticks
-    |> Map.new()
-    |> tap(fn intervals ->
-      Enum.each(intervals, fn {id, interval} -> send_tick(id, interval) end)
-    end)
-  end
+  defp start_tick_manager([]), do: nil
 
-  defp schedule_tick(%{ticks: ticks} = state, id, interval) do
-    if Map.has_key?(ticks, id), do: send_tick(id, interval)
-    state
+  defp start_tick_manager(ticks) do
+    {:ok, manager} = TickManager.start_link(self(), ticks)
+    manager
   end
-
-  defp send_tick(id, interval), do: Process.send_after(self(), {:tick, id}, interval)
 
   defp dispatch_event(%{app: app, app_state: app_state} = state, event) do
     case app.handle_event(event, app_state) do
