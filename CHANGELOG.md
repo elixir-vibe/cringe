@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Replace the `Cringe.Test` helper module with `Cringe.Assertions`, `Cringe.Case`, and `Cringe.Driver`.
+- Preserve active ANSI SGR styling in `Cringe.Measure.take/2`.
 
 ## 0.2.0 (2026-05-26)
 

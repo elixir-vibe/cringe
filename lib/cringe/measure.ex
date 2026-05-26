@@ -34,21 +34,8 @@ defmodule Cringe.Measure do
 
   @spec take(String.t(), non_neg_integer()) :: String.t()
   def take(text, width) when is_binary(text) and is_integer(width) and width >= 0 do
-    text
-    |> Cringe.ANSI.strip()
-    |> String.graphemes()
-    |> Enum.reduce_while({[], 0}, fn grapheme, {acc, used} ->
-      grapheme_width = grapheme_width(grapheme)
-
-      if used + grapheme_width <= width do
-        {:cont, {[grapheme | acc], used + grapheme_width}}
-      else
-        {:halt, {acc, used}}
-      end
-    end)
-    |> elem(0)
-    |> Enum.reverse()
-    |> Enum.join()
+    {result, _visible, active_sgr} = take_ansi(text, width, 0, "", [])
+    result <> reset_if_styled(active_sgr)
   end
 
   @spec pad(String.t(), non_neg_integer()) :: String.t()
@@ -56,10 +43,51 @@ defmodule Cringe.Measure do
     text <> String.duplicate(" ", max(width - width(text), 0))
   end
 
-  defp grapheme_width(grapheme) do
-    codepoints = String.to_charlist(grapheme)
+  defp take_ansi(_text, width, visible, acc, active_sgr) when visible >= width do
+    {acc, visible, active_sgr}
+  end
 
-    codepoints
+  defp take_ansi("", _width, visible, acc, active_sgr), do: {acc, visible, active_sgr}
+
+  defp take_ansi(<<"\e[", rest::binary>>, width, visible, acc, active_sgr) do
+    {escape, rest} = take_escape(rest, "\e[")
+    take_ansi(rest, width, visible, acc <> escape, update_sgr(active_sgr, escape))
+  end
+
+  defp take_ansi(text, width, visible, acc, active_sgr) do
+    case String.next_grapheme(text) do
+      {grapheme, rest} ->
+        grapheme_width = grapheme_width(grapheme)
+
+        if visible + grapheme_width <= width do
+          take_ansi(rest, width, visible + grapheme_width, acc <> grapheme, active_sgr)
+        else
+          {acc, visible, active_sgr}
+        end
+
+      nil ->
+        {acc, visible, active_sgr}
+    end
+  end
+
+  defp take_escape(<<"m", rest::binary>>, acc), do: {acc <> "m", rest}
+
+  defp take_escape(<<char::binary-size(1), rest::binary>>, acc),
+    do: take_escape(rest, acc <> char)
+
+  defp take_escape("", acc), do: {acc, ""}
+
+  defp update_sgr(_active_sgr, "\e[0m"), do: []
+  defp update_sgr(_active_sgr, "\e[m"), do: []
+  defp update_sgr(active_sgr, "\e[" <> _params = escape), do: [escape | active_sgr]
+  defp update_sgr(active_sgr, _escape), do: active_sgr
+
+  defp reset_if_styled([]), do: ""
+  defp reset_if_styled(_active_sgr), do: "\e[0m"
+
+  defp grapheme_width(grapheme) do
+    grapheme
+    |> String.to_charlist()
     |> width_properties()
     |> width_from_properties()
   end

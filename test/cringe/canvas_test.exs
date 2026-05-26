@@ -40,6 +40,12 @@ defmodule Cringe.CanvasTest do
     assert Canvas.new(4, 1) |> Canvas.put(0, 0, line) |> Canvas.lines() == ["\e[1;32mok\e[0m  "]
   end
 
+  test "resets clipped ANSI full-line writes" do
+    line = "\e[1;32mhello\e[0m"
+
+    assert Canvas.new(3, 1) |> Canvas.put(0, 0, line) |> Canvas.lines() == ["\e[1;32mhel\e[0m"]
+  end
+
   test "replaces blocks with a full-line fast path" do
     canvas =
       Canvas.new(6, 4)

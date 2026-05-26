@@ -70,43 +70,18 @@ defmodule Cringe.Canvas do
 
   defp fit_line(text, width) do
     text
-    |> take_ansi_prefix(width)
+    |> Measure.take(width)
     |> Measure.pad(width)
   end
 
   defp put_text(line, x, text, width) do
     left = Measure.take(line, x)
     visible_width = min(Measure.width(text), width - x)
-    visible = take_ansi_prefix(text, visible_width)
+    visible = Measure.take(text, visible_width)
     right = line |> drop_visible(x + visible_width) |> Measure.take(width)
 
     Measure.pad(left <> visible <> right, width)
   end
-
-  defp take_ansi_prefix(text, width), do: take_ansi_prefix(text, width, 0, "")
-
-  defp take_ansi_prefix("", _width, _visible, acc), do: acc
-
-  defp take_ansi_prefix(<<"\e[", rest::binary>>, width, visible, acc) do
-    {escape, rest} = take_escape(rest, "\e[")
-    take_ansi_prefix(rest, width, visible, acc <> escape)
-  end
-
-  defp take_ansi_prefix(_text, width, visible, acc) when visible >= width, do: acc
-
-  defp take_ansi_prefix(text, width, visible, acc) do
-    case String.next_grapheme(text) do
-      {grapheme, rest} -> take_ansi_prefix(rest, width, visible + 1, acc <> grapheme)
-      nil -> acc
-    end
-  end
-
-  defp take_escape(<<"m", rest::binary>>, acc), do: {acc <> "m", rest}
-
-  defp take_escape(<<char::binary-size(1), rest::binary>>, acc),
-    do: take_escape(rest, acc <> char)
-
-  defp take_escape("", acc), do: {acc, ""}
 
   defp drop_visible(line, count) do
     line
