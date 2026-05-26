@@ -25,4 +25,12 @@ defmodule Cringe.PainterTest do
     refute text =~ "\e[1;1H"
     assert painter.previous == ["one", "three"]
   end
+
+  test "moves cursor after painting frame" do
+    painter = Cringe.Painter.new(20, 5)
+    frame = Cringe.frame(input(value: "abc", focused: true))
+    {output, _painter} = Cringe.Painter.render(painter, frame)
+
+    assert IO.iodata_to_binary(output) =~ "\e[1;6H"
+  end
 end

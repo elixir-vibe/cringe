@@ -7,15 +7,17 @@ defmodule Cringe.Layout.Node do
   alias Cringe.Measure
   alias Cringe.Rect
 
-  @enforce_keys [:document, :rect, :size, :lines]
-  defstruct [:document, :rect, :size, :lines, children: []]
+  @enforce_keys [:document, :rect, :size, :content_rect, :lines]
+  defstruct [:document, :rect, :size, :content_rect, :lines, children: [], cursor: nil]
 
   @type t :: %__MODULE__{
           document: Cringe.Document.t(),
           rect: Rect.t(),
           size: Size.t(),
+          content_rect: Rect.t(),
           lines: [String.t()],
-          children: [t()]
+          children: [t()],
+          cursor: {pos_integer(), pos_integer()} | nil
         }
 
   @spec new(Cringe.Document.t(), [String.t()], keyword()) :: t()
@@ -23,14 +25,18 @@ defmodule Cringe.Layout.Node do
     x = Keyword.get(opts, :x, 0)
     y = Keyword.get(opts, :y, 0)
     children = Keyword.get(opts, :children, [])
+    cursor = Keyword.get(opts, :cursor)
     size = Size.new(width(lines), length(lines))
+    rect = Rect.new(x, y, size.width, size.height)
 
     %__MODULE__{
       document: document,
-      rect: Rect.new(x, y, size.width, size.height),
+      rect: rect,
       size: size,
+      content_rect: Keyword.get(opts, :content_rect, rect),
       lines: lines,
-      children: children
+      children: children,
+      cursor: cursor
     }
   end
 

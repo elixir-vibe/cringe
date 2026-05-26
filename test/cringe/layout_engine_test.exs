@@ -18,6 +18,7 @@ defmodule Cringe.Layout.EngineTest do
 
     assert node.rect.width == 7
     assert node.rect.height == 7
+    assert node.content_rect == %Cringe.Rect{x: 2, y: 2, width: 3, height: 3}
     assert [box_child] = node.children
     assert box_child.rect.x == 2
     assert box_child.rect.y == 2
@@ -32,5 +33,15 @@ defmodule Cringe.Layout.EngineTest do
     assert node.lines == ["hel"]
     assert node.rect.width == 3
     assert node.rect.height == 1
+  end
+
+  test "translates cursors through layout containers" do
+    document =
+      box padding: 1 do
+        input(value: "abc", focused: true, width: 8)
+      end
+
+    assert Engine.layout(document).cursor == {3, 8}
+    assert frame(document).cursor == {3, 8}
   end
 end

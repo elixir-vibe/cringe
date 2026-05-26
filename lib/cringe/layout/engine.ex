@@ -8,6 +8,7 @@ defmodule Cringe.Layout.Engine do
   alias Cringe.Layout
   alias Cringe.Layout.{Constraint, Node}
   alias Cringe.Measure
+  alias Cringe.Rect
 
   @spec layout(Cringe.Document.t(), keyword()) :: Node.t()
   def layout(document, opts \\ []) do
@@ -26,7 +27,7 @@ defmodule Cringe.Layout.Engine do
       |> Enum.map(&ANSI.apply(&1, opts, ansi?))
       |> Layout.resize_block(opts)
 
-    Node.new(document, lines)
+    Node.new(document, lines, cursor: Keyword.get(opts, :cursor))
   end
 
   defp layout_node(%Stack{direction: :vertical, children: children, opts: opts} = document, ansi?) do
@@ -41,7 +42,7 @@ defmodule Cringe.Layout.Engine do
       |> join_blocks(separator)
       |> Layout.resize_block(opts)
 
-    Node.new(document, lines, children: child_nodes)
+    Node.new(document, lines, children: child_nodes, cursor: first_cursor(child_nodes))
   end
 
   defp layout_node(
@@ -69,7 +70,7 @@ defmodule Cringe.Layout.Engine do
       |> Layout.resize_block(Keyword.drop(opts, [:width]))
 
     children = position_horizontal(child_nodes, widths, gap)
-    Node.new(document, lines, children: children)
+    Node.new(document, lines, children: children, cursor: first_cursor(children))
   end
 
   defp layout_node(%Box{child: child, opts: opts} = document, ansi?) do
@@ -86,7 +87,18 @@ defmodule Cringe.Layout.Engine do
       end
       |> Layout.resize_block(opts)
 
-    Node.new(document, lines, children: [position_box_child(child_node, padding, border)])
+    offset = padding + border_offset(border)
+    child_node = position_box_child(child_node, offset)
+    rect = Rect.new(0, 0, block_width(lines), length(lines))
+
+    content_rect =
+      Rect.new(offset, offset, max(rect.width - offset * 2, 0), max(rect.height - offset * 2, 0))
+
+    Node.new(document, lines,
+      children: [child_node],
+      content_rect: content_rect,
+      cursor: translate_cursor(child_node.cursor, child_node.rect)
+    )
   end
 
   defp apply_root_constraint(node, %Constraint{} = constraint) do
@@ -95,7 +107,11 @@ defmodule Cringe.Layout.Engine do
       |> maybe_clip_height(constraint.height)
       |> Enum.map(&maybe_clip_width(&1, constraint.width))
 
-    Node.new(node.document, lines, children: node.children)
+    Node.new(node.document, lines,
+      children: node.children,
+      content_rect: clip_rect(node.content_rect, lines),
+      cursor: clip_cursor(node.cursor, lines)
+    )
   end
 
   defp position_vertical(nodes, gap) do
@@ -115,9 +131,33 @@ defmodule Cringe.Layout.Engine do
     |> elem(0)
   end
 
-  defp position_box_child(node, padding, border) do
-    offset = padding + border_offset(border)
+  defp position_box_child(node, offset) do
     %{node | rect: %{node.rect | x: offset, y: offset}}
+  end
+
+  defp first_cursor(nodes) do
+    Enum.find_value(nodes, &translate_cursor(&1.cursor, &1.rect))
+  end
+
+  defp translate_cursor(nil, _rect), do: nil
+  defp translate_cursor({row, col}, rect), do: {row + rect.y, col + rect.x}
+
+  defp clip_rect(rect, lines) do
+    Rect.new(rect.x, rect.y, min(rect.width, block_width(lines)), min(rect.height, length(lines)))
+  end
+
+  defp clip_cursor(nil, _lines), do: nil
+
+  defp clip_cursor({row, col} = cursor, lines) do
+    if row <= length(lines) and col <= line_width(lines, row) + 1 do
+      cursor
+    end
+  end
+
+  defp line_width(lines, row) do
+    lines
+    |> Enum.at(row - 1, "")
+    |> Measure.width()
   end
 
   defp border_offset(false), do: 0

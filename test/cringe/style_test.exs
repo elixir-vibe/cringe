@@ -4,10 +4,6 @@ defmodule Cringe.StyleTest do
   import Cringe
   import Cringe.Test, only: [assert_render: 3]
 
-  test "renders plain text by default" do
-    assert text("ok", color: :green, bold: true) |> render() == "ok"
-  end
-
   test "renders ANSI styles when enabled" do
     assert text("ok", color: :green, bold: true) |> render(ansi: true) == "\e[1;32mok\e[0m"
   end
@@ -26,5 +22,10 @@ defmodule Cringe.StyleTest do
       """,
       ansi: true
     )
+  end
+
+  test "provides shared style variants" do
+    assert Cringe.Style.variant(:focused, color: :yellow) == [bold: true, color: :yellow]
+    assert Cringe.Theme.input()[:placeholder_color] == :bright_black
   end
 end

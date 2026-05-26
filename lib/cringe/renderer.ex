@@ -17,9 +17,7 @@ defmodule Cringe.Renderer do
 
   @spec frame(Cringe.Document.t(), render_opts()) :: Frame.t()
   def frame(document, opts \\ []) do
-    document
-    |> Engine.layout(opts)
-    |> Map.fetch!(:lines)
-    |> Frame.new()
+    node = Engine.layout(document, opts)
+    Frame.new(node.lines, cursor: node.cursor)
   end
 end

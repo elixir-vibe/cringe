@@ -18,7 +18,7 @@ defmodule Cringe.Painter do
   @spec render(t(), Cringe.Document.t() | Frame.t()) :: {IO.chardata(), t()}
   def render(%__MODULE__{} = painter, %Frame{} = frame) do
     lines = frame.lines |> Enum.take(painter.height)
-    output = paint(painter.previous, lines)
+    output = output(paint(painter.previous, lines), paint_cursor(frame.cursor))
     {output, %{painter | previous: lines}}
   end
 
@@ -49,6 +49,14 @@ defmodule Cringe.Painter do
     |> Enum.reject(fn {{old, new}, _row} -> old == new end)
     |> Enum.map(fn {{_old, new}, row} -> {row, new} end)
   end
+
+  defp output([], []), do: []
+  defp output(paint, cursor), do: [paint, cursor]
+
+  defp paint_cursor(nil), do: []
+
+  defp paint_cursor({row, col}),
+    do: ["\e[", Integer.to_string(row), ";", Integer.to_string(col), "H"]
 
   defp pad_to(lines, size), do: lines ++ List.duplicate("", max(size - length(lines), 0))
 end
