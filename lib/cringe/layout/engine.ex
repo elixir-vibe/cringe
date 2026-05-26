@@ -77,7 +77,14 @@ defmodule Cringe.Layout.Engine do
     padding = Keyword.get(opts, :padding, 0)
     border = Keyword.get(opts, :border, :rounded)
     child_node = layout_node(child, ansi?)
-    content = pad_block(child_node.lines, padding)
+    offset = padding + border_offset(border)
+    scroll_y = Keyword.get(opts, :scroll_y, 0)
+
+    content =
+      child_node.lines
+      |> maybe_scroll(scroll_y)
+      |> maybe_clip_overflow(opts, offset)
+      |> pad_block(padding)
 
     lines =
       case border do
@@ -87,7 +94,6 @@ defmodule Cringe.Layout.Engine do
       end
       |> Layout.resize_block(opts)
 
-    offset = padding + border_offset(border)
     child_node = position_box_child(child_node, offset)
     rect = Rect.new(0, 0, block_width(lines), length(lines))
 
@@ -97,7 +103,7 @@ defmodule Cringe.Layout.Engine do
     Node.new(document, lines,
       children: [child_node],
       content_rect: content_rect,
-      cursor: translate_cursor(child_node.cursor, child_node.rect)
+      cursor: box_cursor(child_node.cursor, child_node.rect, scroll_y, content_rect)
     )
   end
 
@@ -163,6 +169,34 @@ defmodule Cringe.Layout.Engine do
   defp border_offset(false), do: 0
   defp border_offset(nil), do: 0
   defp border_offset(_border), do: 1
+
+  defp maybe_scroll(lines, scroll_y) when is_integer(scroll_y) and scroll_y > 0,
+    do: Enum.drop(lines, scroll_y)
+
+  defp maybe_scroll(lines, _scroll_y), do: lines
+
+  defp maybe_clip_overflow(lines, opts, offset) do
+    if Keyword.get(opts, :overflow) == :hidden and Keyword.has_key?(opts, :height) do
+      lines |> Enum.take(max(Keyword.fetch!(opts, :height) - offset * 2, 0))
+    else
+      lines
+    end
+  end
+
+  defp box_cursor(nil, _rect, _scroll_y, _content_rect), do: nil
+
+  defp box_cursor({row, col}, rect, scroll_y, content_rect) do
+    cursor = {row + rect.y - scroll_y, col + rect.x}
+
+    if in_rect?(cursor, content_rect) do
+      cursor
+    end
+  end
+
+  defp in_rect?({row, col}, rect) do
+    row > rect.y and row <= rect.y + rect.height and col > rect.x and
+      col <= rect.x + rect.width + 1
+  end
 
   defp join_blocks([], _separator), do: []
 
