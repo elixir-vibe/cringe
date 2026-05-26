@@ -3,14 +3,21 @@ defmodule Cringe.Painter do
   Stateful terminal frame painter.
 
   The painter returns ANSI iodata for changed lines only after the first frame.
+  It also owns runtime cursor visibility for frames that expose a cursor.
   """
 
   alias Cringe.Frame
 
   @enforce_keys [:width, :height]
-  defstruct [:width, :height, previous: []]
+  defstruct [:width, :height, previous: [], cursor: nil, cursor_visible?: false]
 
-  @type t :: %__MODULE__{width: pos_integer(), height: pos_integer(), previous: [String.t()]}
+  @type t :: %__MODULE__{
+          width: pos_integer(),
+          height: pos_integer(),
+          previous: [String.t()],
+          cursor: {pos_integer(), pos_integer()} | nil,
+          cursor_visible?: boolean()
+        }
 
   @spec new(pos_integer(), pos_integer()) :: t()
   def new(width, height), do: %__MODULE__{width: width, height: height}
@@ -18,8 +25,10 @@ defmodule Cringe.Painter do
   @spec render(t(), Cringe.Document.t() | Frame.t()) :: {IO.chardata(), t()}
   def render(%__MODULE__{} = painter, %Frame{} = frame) do
     lines = frame.lines |> Enum.take(painter.height)
-    output = output(paint(painter.previous, lines), paint_cursor(frame.cursor))
-    {output, %{painter | previous: lines}}
+    cursor = visible_cursor(frame.cursor, painter)
+    output = output(paint(painter.previous, lines), cursor_output(painter, cursor))
+
+    {output, %{painter | previous: lines, cursor: cursor, cursor_visible?: cursor != nil}}
   end
 
   def render(%__MODULE__{} = painter, document) do
@@ -53,10 +62,28 @@ defmodule Cringe.Painter do
   defp output([], []), do: []
   defp output(paint, cursor), do: [paint, cursor]
 
-  defp paint_cursor(nil), do: []
+  defp cursor_output(%__MODULE__{cursor_visible?: true, cursor: cursor}, cursor), do: []
+  defp cursor_output(%__MODULE__{cursor_visible?: true}, nil), do: cursor_hide()
+  defp cursor_output(%__MODULE__{cursor_visible?: false}, nil), do: []
 
-  defp paint_cursor({row, col}),
+  defp cursor_output(%__MODULE__{cursor_visible?: false}, cursor),
+    do: [cursor_show(), cursor_move(cursor)]
+
+  defp cursor_output(%__MODULE__{cursor_visible?: true}, cursor), do: cursor_move(cursor)
+
+  defp visible_cursor(nil, _painter), do: nil
+
+  defp visible_cursor({row, col}, painter) do
+    if row in 1..painter.height and col in 1..painter.width do
+      {row, col}
+    end
+  end
+
+  defp cursor_move({row, col}),
     do: ["\e[", Integer.to_string(row), ";", Integer.to_string(col), "H"]
+
+  defp cursor_show, do: "\e[?25h"
+  defp cursor_hide, do: "\e[?25l"
 
   defp pad_to(lines, size), do: lines ++ List.duplicate("", max(size - length(lines), 0))
 end

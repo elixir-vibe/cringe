@@ -4,6 +4,7 @@
 
 - Replace the `Cringe.Test` helper module with `Cringe.Assertions`, `Cringe.Case`, and `Cringe.Driver`.
 - Preserve active ANSI SGR styling in `Cringe.Measure.take/2`.
+- Let `Cringe.Painter` manage terminal cursor visibility from frame cursor state.
 
 ## 0.2.0 (2026-05-26)
 
