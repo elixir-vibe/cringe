@@ -3,20 +3,24 @@ defmodule Cringe.Terminal.KeyDecoderTest do
 
   alias Cringe.Terminal.KeyDecoder
 
-  test "decodes common key sequences" do
-    assert KeyDecoder.decode("\e[A\e[B\r\u007F") == [
-             Cringe.Event.key(:up),
-             Cringe.Event.key(:down),
-             Cringe.Event.key(:enter),
-             Cringe.Event.key(:backspace)
-           ]
+  test "decodes common key sequences through Ghostty" do
+    assert KeyDecoder.decode("\e[A") == [Cringe.Event.key(:up)]
+    assert KeyDecoder.decode("\e[B") == [Cringe.Event.key(:down)]
+    assert KeyDecoder.decode("\r") == [Cringe.Event.key(:enter)]
+    assert KeyDecoder.decode("\u007F") == [Cringe.Event.key(:backspace)]
   end
 
-  test "decodes printable text" do
-    assert KeyDecoder.decode("ab") == [Cringe.Event.text("a"), Cringe.Event.text("b")]
+  test "decodes printable text through Ghostty" do
+    assert KeyDecoder.decode("a") == [Cringe.Event.text("a")]
   end
 
-  test "decodes ctrl+c" do
+  test "decodes ctrl+c through Ghostty" do
     assert KeyDecoder.decode("\u0003") == [Cringe.Event.key(:c, mods: [:ctrl])]
+  end
+
+  test "maps Ghostty key events to Cringe events" do
+    event = %Ghostty.KeyEvent{action: :press, key: :arrow_left, mods: [:super]}
+
+    assert KeyDecoder.from_ghostty(event) == Cringe.Event.key(:left, mods: [:meta])
   end
 end

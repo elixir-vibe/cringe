@@ -28,6 +28,7 @@ defmodule Cringe.MixProject do
 
   defp deps do
     [
+      {:ghostty, "~> 0.4.9"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:ex_dna, "~> 1.5", only: [:dev, :test], runtime: false},
