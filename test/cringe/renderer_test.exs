@@ -34,7 +34,7 @@ defmodule Cringe.RendererTest do
 
     assert_render(document, """
     one
-
+       
     two
     """)
   end

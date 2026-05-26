@@ -11,7 +11,14 @@ defmodule Cringe.PainterTest do
     assert text =~ "\e[H\e[2J"
     assert text =~ "one"
     assert text =~ "two"
-    assert painter.previous == ["one", "two"]
+
+    assert painter.previous == [
+             "one                 ",
+             "two                 ",
+             "                    ",
+             "                    ",
+             "                    "
+           ]
   end
 
   test "subsequent paints write changed lines only" do
@@ -22,8 +29,15 @@ defmodule Cringe.PainterTest do
     text = IO.iodata_to_binary(output)
     assert text =~ "\e[2;1H"
     assert text =~ "three"
-    refute text =~ "\e[1;1H"
-    assert painter.previous == ["one", "three"]
+    refute text =~ "\e[1;1H\e[2K"
+
+    assert painter.previous == [
+             "one                 ",
+             "three               ",
+             "                    ",
+             "                    ",
+             "                    "
+           ]
   end
 
   test "moves cursor after painting frame" do
