@@ -19,6 +19,7 @@
 - Add layout focus navigation helpers.
 - Add clipped canvas block writes.
 - Draw boxes recursively from layout geometry with clipped overflow.
+- Stop composing child content into stack and box layout lines.
 
 ## 0.2.0 (2026-05-26)
 

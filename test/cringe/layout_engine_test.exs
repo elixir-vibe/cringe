@@ -27,12 +27,25 @@ defmodule Cringe.Layout.EngineTest do
     assert second.rect.y == 2
   end
 
-  test "applies root constraints to layout lines" do
+  test "applies root constraints to text layout lines" do
     node = Engine.layout(text("hello\nworld"), width: 3, height: 1)
 
     assert node.lines == ["hel"]
     assert node.rect.width == 3
     assert node.rect.height == 1
+  end
+
+  test "container layout lines track geometry without composing child content" do
+    node =
+      column gap: 1 do
+        text("one")
+        text("two")
+      end
+      |> Engine.layout()
+
+    assert node.lines == ["   ", "   ", "   "]
+    assert node.rect.width == 3
+    assert node.rect.height == 3
   end
 
   test "translates cursors through layout containers" do

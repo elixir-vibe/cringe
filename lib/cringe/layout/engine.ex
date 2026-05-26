@@ -39,7 +39,10 @@ defmodule Cringe.Layout.Engine do
       |> join_blocks(separator)
       |> Layout.resize_block(opts)
 
-    Node.new(document, lines, children: child_nodes, cursor: first_cursor(child_nodes))
+    Node.new(document, blank_block(lines),
+      children: child_nodes,
+      cursor: first_cursor(child_nodes)
+    )
   end
 
   defp layout_node(%Stack{direction: :horizontal, children: children, opts: opts} = document) do
@@ -64,7 +67,7 @@ defmodule Cringe.Layout.Engine do
       |> Layout.resize_block(Keyword.drop(opts, [:width]))
 
     children = position_horizontal(child_nodes, widths, gap)
-    Node.new(document, lines, children: children, cursor: first_cursor(children))
+    Node.new(document, blank_block(lines), children: children, cursor: first_cursor(children))
   end
 
   defp layout_node(%Box{child: child, opts: opts} = document) do
@@ -94,7 +97,7 @@ defmodule Cringe.Layout.Engine do
     content_rect =
       Rect.new(offset, offset, max(rect.width - offset * 2, 0), max(rect.height - offset * 2, 0))
 
-    Node.new(document, lines,
+    Node.new(document, blank_block(lines),
       children: [child_node],
       content_rect: content_rect,
       cursor: box_cursor(child_node.cursor, child_node.rect, scroll_y, content_rect)
@@ -257,6 +260,11 @@ defmodule Cringe.Layout.Engine do
     lines
     |> Enum.map(&Measure.width/1)
     |> Enum.max(fn -> 0 end)
+  end
+
+  defp blank_block(lines) do
+    blank = String.duplicate(" ", block_width(lines))
+    List.duplicate(blank, length(lines))
   end
 
   defp pad_block(lines, 0), do: lines
