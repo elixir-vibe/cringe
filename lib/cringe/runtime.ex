@@ -5,6 +5,7 @@ defmodule Cringe.Runtime do
 
   use GenServer
 
+  alias Cringe.Event
   alias Cringe.Terminal.KeyDecoder
 
   @default_width 80
@@ -69,9 +70,9 @@ defmodule Cringe.Runtime do
   end
 
   @impl GenServer
-  def handle_call({:dispatch, event}, _from, %{app: app, app_state: app_state} = state) do
-    case app.handle_event(event, app_state) do
-      {:noreply, next_app_state} -> {:reply, :ok, %{state | app_state: next_app_state}}
+  def handle_call({:dispatch, event}, _from, state) do
+    case dispatch_event(state, event) do
+      {:ok, next_state} -> {:reply, :ok, next_state}
       {:stop, reason} -> {:stop, reason, :ok, state}
     end
   end
@@ -102,6 +103,26 @@ defmodule Cringe.Runtime do
     do: {:reply, backend_state, state}
 
   @impl GenServer
+  def handle_info({Ghostty.TTY, _tty, {:key, event}}, state) do
+    event
+    |> KeyDecoder.from_ghostty()
+    |> handle_terminal_event(state)
+  end
+
+  def handle_info({Ghostty.TTY, _tty, {:data, data}}, state) do
+    handle_terminal_events(KeyDecoder.decode(data), state)
+  end
+
+  def handle_info({Ghostty.TTY, _tty, {:resize, width, height}}, state) do
+    state
+    |> resize(width, height)
+    |> then(&handle_terminal_event(Event.resize(width, height), &1))
+  end
+
+  def handle_info({Ghostty.TTY, _tty, :eof}, state), do: {:stop, :normal, state}
+  def handle_info(_message, state), do: {:noreply, state}
+
+  @impl GenServer
   def terminate(_reason, %{backend: nil}), do: :ok
 
   def terminate(_reason, %{backend: backend, backend_state: backend_state}),
@@ -114,6 +135,56 @@ defmodule Cringe.Runtime do
 
   defp init_backend(nil, _opts), do: {:ok, nil}
   defp init_backend(backend, opts), do: backend.init(opts)
+
+  defp dispatch_event(%{app: app, app_state: app_state} = state, event) do
+    case app.handle_event(event, app_state) do
+      {:noreply, next_app_state} -> {:ok, %{state | app_state: next_app_state}}
+      {:stop, reason} -> {:stop, reason}
+    end
+  end
+
+  defp handle_terminal_event(:ignore, state), do: {:noreply, state}
+
+  defp handle_terminal_event(event, state) do
+    case dispatch_event(state, event) do
+      {:ok, next_state} -> {:noreply, paint_after_input(next_state)}
+      {:stop, reason} -> {:stop, reason, state}
+    end
+  end
+
+  defp handle_terminal_events(events, state) do
+    Enum.reduce_while(events, {:ok, state}, fn event, {:ok, current_state} ->
+      case dispatch_event(current_state, event) do
+        {:ok, next_state} -> {:cont, {:ok, next_state}}
+        {:stop, reason} -> {:halt, {:stop, reason}}
+      end
+    end)
+    |> case do
+      {:ok, next_state} -> {:noreply, paint_after_input(next_state)}
+      {:stop, reason} -> {:stop, reason, state}
+    end
+  end
+
+  defp resize(state, width, height) do
+    render_opts = state.render_opts |> Keyword.put(:width, width) |> Keyword.put(:height, height)
+    %{state | render_opts: render_opts, painter: new_painter(render_opts)}
+  end
+
+  defp paint_after_input(%{backend: nil} = state), do: state
+
+  defp paint_after_input(%{backend: backend, backend_state: backend_state} = state) do
+    {output, next_painter} = paint_output(state)
+    next_state = %{state | painter: next_painter}
+
+    if output == [] do
+      next_state
+    else
+      case backend.render(output, backend_state) do
+        {:ok, next_backend_state} -> %{next_state | backend_state: next_backend_state}
+        {:error, _reason} -> state
+      end
+    end
+  end
 
   defp default_render_opts(opts) do
     opts

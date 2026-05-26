@@ -13,6 +13,9 @@ defmodule Cringe.RuntimeTest do
     def handle_event(%Cringe.Event.Key{key: :up}, state),
       do: {:noreply, %{state | count: state.count + 1}}
 
+    def handle_event(%Cringe.Event.Resize{} = event, state),
+      do: {:noreply, Map.put(state, :last_resize, event)}
+
     @impl true
     def render(state), do: box(text("Count: #{state.count}"), padding: 1)
   end
@@ -111,4 +114,36 @@ defmodule Cringe.RuntimeTest do
     assert [output] = Cringe.Runtime.Backend.Test.frames(app)
     assert output =~ "Count: 1"
   end
+
+  test "handles Ghostty TTY key messages and repaints" do
+    assert {:ok, app} = Cringe.Test.start(Counter, backend: Cringe.Runtime.Backend.Test)
+
+    send(app, {Ghostty.TTY, self(), {:key, %Ghostty.KeyEvent{action: :press, key: :arrow_up}}})
+
+    assert eventually(fn -> Cringe.Runtime.state(app).count == 1 end)
+    assert [output] = Cringe.Runtime.Backend.Test.frames(app)
+    assert output =~ "Count: 1"
+  end
+
+  test "handles Ghostty TTY resize messages" do
+    assert {:ok, app} = Cringe.Test.start(Counter, backend: Cringe.Runtime.Backend.Test)
+
+    send(app, {Ghostty.TTY, self(), {:resize, 12, 4}})
+
+    assert eventually(fn -> Cringe.Runtime.Backend.Test.frames(app) != [] end)
+    assert [%{width: 12, height: 4}] = [Cringe.Runtime.state(app) |> Map.get(:last_resize)]
+  end
+
+  defp eventually(fun, attempts \\ 20)
+
+  defp eventually(fun, attempts) when attempts > 0 do
+    if fun.() do
+      true
+    else
+      Process.sleep(5)
+      eventually(fun, attempts - 1)
+    end
+  end
+
+  defp eventually(_fun, 0), do: false
 end

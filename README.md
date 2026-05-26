@@ -61,6 +61,7 @@ mix run examples/layout.exs
 mix run examples/dsl.exs
 mix run examples/widgets.exs
 mix run examples/counter.exs
+mix run examples/interactive_counter.exs
 ```
 
 ## Installation
