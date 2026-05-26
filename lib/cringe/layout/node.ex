@@ -36,6 +36,16 @@ defmodule Cringe.Layout.Node do
 
   @spec new(Cringe.Document.t(), [String.t()], keyword()) :: t()
   def new(document, lines, opts \\ []) do
+    size = Keyword.get_lazy(opts, :size, fn -> Size.new(width(lines), length(lines)) end)
+    build(document, lines, size, opts)
+  end
+
+  @spec new_sized(Cringe.Document.t(), Size.t(), keyword()) :: t()
+  def new_sized(document, %Size{} = size, opts \\ []) do
+    build(document, blank_lines(size), size, opts)
+  end
+
+  defp build(document, lines, %Size{} = size, opts) do
     x = Keyword.get(opts, :x, 0)
     y = Keyword.get(opts, :y, 0)
     children = Keyword.get(opts, :children, [])
@@ -43,7 +53,6 @@ defmodule Cringe.Layout.Node do
     id = Keyword.get(opts, :id, document_opt(document, :id))
     role = Keyword.get(opts, :role, document_opt(document, :role))
     focusable? = Keyword.get(opts, :focusable?, document_focusable?(document, role))
-    size = Size.new(width(lines), length(lines))
     rect = Rect.new(x, y, size.width, size.height)
 
     %__MODULE__{
@@ -66,6 +75,11 @@ defmodule Cringe.Layout.Node do
   defp document_focusable?(document, role) do
     document_opt(document, :focusable) == true or document_opt(document, :focusable?) == true or
       role in [:input, :select]
+  end
+
+  defp blank_lines(%Size{width: width, height: height}) do
+    blank = String.duplicate(" ", width)
+    List.duplicate(blank, height)
   end
 
   defp width(lines) do

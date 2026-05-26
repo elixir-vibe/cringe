@@ -5,7 +5,7 @@ defmodule Cringe.Layout.Engine do
 
   alias Cringe.Document.{Box, Stack, Text}
   alias Cringe.Layout
-  alias Cringe.Layout.{Constraint, Node}
+  alias Cringe.Layout.{Constraint, Node, Size}
   alias Cringe.Measure
   alias Cringe.Rect
 
@@ -29,17 +29,10 @@ defmodule Cringe.Layout.Engine do
 
   defp layout_node(%Stack{direction: :vertical, children: children, opts: opts} = document) do
     gap = Keyword.get(opts, :gap, 0)
-    separator = List.duplicate("", gap)
     child_nodes = children |> Enum.map(&layout_node/1) |> position_vertical(gap)
+    size = child_nodes |> vertical_stack_size(gap) |> constrain_size(opts)
 
-    lines =
-      child_nodes
-      |> Enum.map(& &1.lines)
-      |> Enum.reject(&(&1 == []))
-      |> join_blocks(separator)
-      |> Layout.resize_block(opts)
-
-    Node.new(document, blank_block(lines),
+    Node.new_sized(document, size,
       children: child_nodes,
       cursor: first_cursor(child_nodes)
     )
@@ -47,27 +40,19 @@ defmodule Cringe.Layout.Engine do
 
   defp layout_node(%Stack{direction: :horizontal, children: children, opts: opts} = document) do
     gap = Keyword.get(opts, :gap, 0)
-    separator = String.duplicate(" ", gap)
     child_nodes = Enum.map(children, &layout_node/1)
-    blocks = Enum.map(child_nodes, & &1.lines)
-    widths = row_widths(children, blocks, gap, Keyword.get(opts, :width))
-    height = blocks |> Enum.map(&length/1) |> Enum.max(fn -> 0 end)
+    widths = row_widths(children, child_nodes, gap, Keyword.get(opts, :width))
+    positioned_children = position_horizontal(child_nodes, widths, gap)
 
-    resized_blocks =
-      blocks
-      |> Enum.zip(widths)
-      |> Enum.map(fn {block, width} ->
-        block |> pad_block_height(height) |> Layout.resize_width(width, :left)
-      end)
+    size =
+      positioned_children
+      |> horizontal_stack_size(gap)
+      |> constrain_size(Keyword.drop(opts, [:width]))
 
-    lines =
-      resized_blocks
-      |> transpose_blocks()
-      |> join_rows(separator)
-      |> Layout.resize_block(Keyword.drop(opts, [:width]))
-
-    children = position_horizontal(child_nodes, widths, gap)
-    Node.new(document, blank_block(lines), children: children, cursor: first_cursor(children))
+    Node.new_sized(document, size,
+      children: positioned_children,
+      cursor: first_cursor(positioned_children)
+    )
   end
 
   defp layout_node(%Box{child: child, opts: opts} = document) do
@@ -77,43 +62,45 @@ defmodule Cringe.Layout.Engine do
     offset = padding + border_offset(border)
     scroll_y = Keyword.get(opts, :scroll_y, 0)
 
-    content =
-      child_node.lines
-      |> maybe_scroll(scroll_y)
-      |> maybe_clip_overflow(opts, offset)
-      |> pad_block(padding)
+    natural_content_size = visible_box_content_size(child_node, opts, offset)
 
-    lines =
-      case border do
-        false -> content
-        nil -> content
-        _ -> bordered(content, border)
-      end
-      |> Layout.resize_block(opts)
+    natural_size =
+      Size.new(natural_content_size.width + offset * 2, natural_content_size.height + offset * 2)
 
+    size = constrain_size(natural_size, opts)
     child_node = position_box_child(child_node, offset)
-    rect = Rect.new(0, 0, block_width(lines), length(lines))
 
     content_rect =
-      Rect.new(offset, offset, max(rect.width - offset * 2, 0), max(rect.height - offset * 2, 0))
+      Rect.new(offset, offset, max(size.width - offset * 2, 0), max(size.height - offset * 2, 0))
 
-    Node.new(document, blank_block(lines),
+    Node.new_sized(document, size,
       children: [child_node],
       content_rect: content_rect,
       cursor: box_cursor(child_node.cursor, child_node.rect, scroll_y, content_rect)
     )
   end
 
-  defp apply_root_constraint(node, %Constraint{} = constraint) do
+  defp apply_root_constraint(%Node{document: %Text{}} = node, %Constraint{} = constraint) do
     lines =
       node.lines
       |> maybe_clip_height(constraint.height)
       |> Enum.map(&maybe_clip_width(&1, constraint.width))
 
-    Node.new(node.document, lines,
+    size = Size.new(block_width(lines), length(lines))
+    Node.new(node.document, lines, cursor: clip_cursor(node.cursor, size))
+  end
+
+  defp apply_root_constraint(node, %Constraint{} = constraint) do
+    size =
+      Size.new(
+        maybe_constrain_dimension(node.rect.width, constraint.width),
+        maybe_constrain_dimension(node.rect.height, constraint.height)
+      )
+
+    Node.new_sized(node.document, size,
       children: node.children,
-      content_rect: clip_rect(node.content_rect, lines),
-      cursor: clip_cursor(node.cursor, lines)
+      content_rect: clip_rect(node.content_rect, size),
+      cursor: clip_cursor(node.cursor, size)
     )
   end
 
@@ -145,40 +132,41 @@ defmodule Cringe.Layout.Engine do
   defp translate_cursor(nil, _rect), do: nil
   defp translate_cursor({row, col}, rect), do: {row + rect.y, col + rect.x}
 
-  defp clip_rect(rect, lines) do
-    Rect.new(rect.x, rect.y, min(rect.width, block_width(lines)), min(rect.height, length(lines)))
+  defp clip_rect(rect, size) do
+    Rect.new(rect.x, rect.y, min(rect.width, size.width), min(rect.height, size.height))
   end
 
-  defp clip_cursor(nil, _lines), do: nil
+  defp clip_cursor(nil, _size), do: nil
 
-  defp clip_cursor({row, col} = cursor, lines) do
-    if row <= length(lines) and col <= line_width(lines, row) + 1 do
+  defp clip_cursor({row, col} = cursor, %Size{} = size) do
+    if row <= size.height and col <= size.width + 1 do
       cursor
     end
-  end
-
-  defp line_width(lines, row) do
-    lines
-    |> Enum.at(row - 1, "")
-    |> Measure.width()
   end
 
   defp border_offset(false), do: 0
   defp border_offset(nil), do: 0
   defp border_offset(_border), do: 1
 
+  defp visible_box_content_size(child_node, opts, offset) do
+    if Keyword.get(opts, :overflow) == :hidden and Keyword.has_key?(opts, :height) do
+      height = max(Keyword.fetch!(opts, :height) - offset * 2, 0)
+
+      lines =
+        child_node.lines
+        |> maybe_scroll(Keyword.get(opts, :scroll_y, 0))
+        |> Enum.take(height)
+
+      Size.new(block_width(lines), length(lines))
+    else
+      Size.new(child_node.rect.width, child_node.rect.height)
+    end
+  end
+
   defp maybe_scroll(lines, scroll_y) when is_integer(scroll_y) and scroll_y > 0,
     do: Enum.drop(lines, scroll_y)
 
   defp maybe_scroll(lines, _scroll_y), do: lines
-
-  defp maybe_clip_overflow(lines, opts, offset) do
-    if Keyword.get(opts, :overflow) == :hidden and Keyword.has_key?(opts, :height) do
-      lines |> Enum.take(max(Keyword.fetch!(opts, :height) - offset * 2, 0))
-    else
-      lines
-    end
-  end
 
   defp box_cursor(nil, _rect, _scroll_y, _content_rect), do: nil
 
@@ -195,16 +183,24 @@ defmodule Cringe.Layout.Engine do
       col <= rect.x + rect.width + 1
   end
 
-  defp join_blocks([], _separator), do: []
+  defp vertical_stack_size([], _gap), do: Size.new(0, 0)
 
-  defp join_blocks(blocks, separator) do
-    blocks
-    |> Enum.intersperse(separator)
-    |> List.flatten()
+  defp vertical_stack_size(nodes, gap) do
+    width = nodes |> Enum.map(& &1.rect.width) |> Enum.max(fn -> 0 end)
+    height = Enum.reduce(nodes, 0, &(&2 + &1.rect.height)) + max(length(nodes) - 1, 0) * gap
+    Size.new(width, height)
   end
 
-  defp row_widths(children, blocks, gap, target_width) do
-    natural = Enum.map(blocks, &block_width/1)
+  defp horizontal_stack_size([], _gap), do: Size.new(0, 0)
+
+  defp horizontal_stack_size(nodes, gap) do
+    width = Enum.reduce(nodes, 0, &(&2 + &1.rect.width)) + max(length(nodes) - 1, 0) * gap
+    height = nodes |> Enum.map(& &1.rect.height) |> Enum.max(fn -> 0 end)
+    Size.new(width, height)
+  end
+
+  defp row_widths(children, nodes, gap, target_width) do
+    natural = Enum.map(nodes, & &1.rect.width)
     requested = Enum.map(children, &requested_width/1)
     grow = Enum.map(children, &grow/1)
     base = Enum.zip_with(requested, natural, &(&1 || &2))
@@ -242,66 +238,34 @@ defmodule Cringe.Layout.Engine do
     end)
   end
 
-  defp pad_block_height(block, height) do
-    block ++ List.duplicate("", max(height - length(block), 0))
+  defp constrain_size(%Size{} = size, opts) do
+    lines = Layout.resize_block(blank_lines(size), opts)
+    Size.new(block_width(lines), length(lines))
   end
 
-  defp transpose_blocks([]), do: []
+  defp maybe_constrain_dimension(value, nil), do: value
 
-  defp transpose_blocks(blocks) do
-    blocks
-    |> Enum.zip()
-    |> Enum.map(&Tuple.to_list/1)
+  defp maybe_constrain_dimension(_value, dimension) when is_integer(dimension) and dimension >= 0,
+    do: dimension
+
+  defp maybe_clip_height(lines, nil), do: lines
+
+  defp maybe_clip_height(lines, height) when is_integer(height) and height >= 0,
+    do: Enum.take(lines, height)
+
+  defp maybe_clip_width(line, nil), do: line
+
+  defp maybe_clip_width(line, width) when is_integer(width) and width >= 0,
+    do: Measure.take(line, width)
+
+  defp blank_lines(%Size{width: width, height: height}) do
+    blank = String.duplicate(" ", width)
+    List.duplicate(blank, height)
   end
-
-  defp join_rows(rows, separator), do: Enum.map(rows, &Enum.join(&1, separator))
 
   defp block_width(lines) do
     lines
     |> Enum.map(&Measure.width/1)
     |> Enum.max(fn -> 0 end)
   end
-
-  defp blank_block(lines) do
-    blank = String.duplicate(" ", block_width(lines))
-    List.duplicate(blank, length(lines))
-  end
-
-  defp pad_block(lines, 0), do: lines
-
-  defp pad_block(lines, padding) when is_integer(padding) and padding > 0 do
-    width = block_width(lines)
-    side = String.duplicate(" ", padding)
-    blank = String.duplicate(" ", width + padding * 2)
-
-    vertical = List.duplicate(blank, padding)
-    padded = Enum.map(lines, &([side, Measure.pad(&1, width), side] |> IO.iodata_to_binary()))
-
-    vertical ++ padded ++ vertical
-  end
-
-  defp bordered(lines, border) do
-    width = block_width(lines)
-    {top_left, top_right, bottom_left, bottom_right, horizontal, vertical} = border_chars(border)
-    horizontal_rule = String.duplicate(horizontal, width)
-
-    top = top_left <> horizontal_rule <> top_right
-    bottom = bottom_left <> horizontal_rule <> bottom_right
-    body = Enum.map(lines, &(vertical <> Measure.pad(&1, width) <> vertical))
-
-    [top | body] ++ [bottom]
-  end
-
-  defp border_chars(:square), do: {"+", "+", "+", "+", "-", "|"}
-  defp border_chars(_border), do: {"╭", "╮", "╰", "╯", "─", "│"}
-
-  defp maybe_clip_height(lines, nil), do: lines
-
-  defp maybe_clip_height(lines, height) when is_integer(height) and height > 0,
-    do: Enum.take(lines, height)
-
-  defp maybe_clip_width(line, nil), do: line
-
-  defp maybe_clip_width(line, width) when is_integer(width) and width > 0,
-    do: Measure.take(line, width)
 end
