@@ -154,4 +154,12 @@ defmodule Cringe.RuntimeTest do
     assert :ok = Driver.keys(app, [:up, :up])
     assert Runtime.state(app).count == 2
   end
+
+  test "can run under a runtime supervisor" do
+    assert {:ok, supervisor} = Cringe.run_supervised(Counter)
+    assert app = Cringe.Runtime.Supervisor.runtime(supervisor)
+
+    assert :ok = Driver.key(app, :up)
+    assert Runtime.state(app).count == 1
+  end
 end

@@ -153,6 +153,13 @@ Cringe.Runtime.paint(app)
 
 The terminal backend uses `Ghostty.TTY` for current-terminal input when running against `:stdio`.
 
+For OTP trees, start the runtime under its supervisor:
+
+```elixir
+{:ok, supervisor} = Cringe.run_supervised(Counter, ansi: true)
+app = Cringe.Runtime.Supervisor.runtime(supervisor)
+```
+
 ## Focus
 
 `Cringe.Focus` is a tiny deterministic focus ring:

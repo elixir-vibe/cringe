@@ -70,8 +70,16 @@ defmodule Cringe do
   def frame(document, opts \\ []), do: Cringe.Renderer.frame(document, opts)
 
   @doc """
-  Starts a supervised Cringe runtime.
+  Starts a Cringe runtime process linked to the caller.
   """
   @spec run(module(), keyword()) :: GenServer.on_start()
   def run(app, opts \\ []), do: Cringe.Runtime.start_link(Keyword.put(opts, :app, app))
+
+  @doc """
+  Starts a supervisor that owns a Cringe runtime process.
+  """
+  @spec run_supervised(module(), keyword()) :: Supervisor.on_start()
+  def run_supervised(app, opts \\ []) do
+    Cringe.Runtime.Supervisor.start_link(Keyword.put(opts, :app, app))
+  end
 end
