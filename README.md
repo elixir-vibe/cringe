@@ -63,6 +63,7 @@ mix run examples/widgets.exs
 mix run examples/counter.exs
 mix run examples/interactive_counter.exs
 mix run examples/interactive_input.exs
+mix run examples/form.exs
 ```
 
 ## Installation

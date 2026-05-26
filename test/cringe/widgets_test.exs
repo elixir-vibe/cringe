@@ -6,6 +6,7 @@ defmodule Cringe.WidgetsTest do
 
   alias Cringe.Widgets.Input
   alias Cringe.Widgets.Input.State
+  alias Cringe.Widgets.Select
 
   test "renders progress bars" do
     assert_render(progress(value: 0.5, width: 4), """
@@ -49,5 +50,19 @@ defmodule Cringe.WidgetsTest do
       one
     › two
     """)
+  end
+
+  test "renders focused select rows with style" do
+    assert render(select(options: ["one", "two"], selected: 1, focused: true), ansi: true) ==
+             "  one\n\e[1;36m› two\e[0m"
+  end
+
+  test "updates select indexes" do
+    options = ["one", "two", "three"]
+
+    assert Select.update(0, Cringe.Event.key(:down), options) == {:ok, 1}
+    assert Select.update(1, Cringe.Event.key(:up), options) == {:ok, 0}
+    assert Select.update(2, Cringe.Event.key(:down), options) == {:ok, 2}
+    assert Select.update(0, Cringe.Event.key(:enter), options) == :ignored
   end
 end
