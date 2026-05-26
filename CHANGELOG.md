@@ -16,6 +16,7 @@
 - Add a runtime supervisor for OTP-owned app processes.
 - Draw stack children from positioned layout geometry.
 - Add terminal-cell-aware `Cringe.Measure.fit/3`.
+- Add layout focus navigation helpers.
 
 ## 0.2.0 (2026-05-26)
 

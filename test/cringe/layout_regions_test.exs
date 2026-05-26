@@ -57,4 +57,22 @@ defmodule Cringe.LayoutRegionsTest do
     assert Layout.find(node, :name).role == :input
     assert Layout.find(node, :role).role == :select
   end
+
+  test "moves focus through focusable nodes" do
+    node =
+      column gap: 1 do
+        input(id: :name, value: "Dan")
+        input(id: :email, value: "dan@example.com")
+        select(id: :role, options: ["Admin", "User"])
+      end
+      |> Engine.layout()
+
+    assert Layout.focus_id(node, :next) == :name
+    assert Layout.focus_id(node, :next, :name) == :email
+    assert Layout.focus_id(node, :next, :role) == :name
+    assert Layout.focus_id(node, :previous) == :role
+    assert Layout.focus_id(node, :previous, :name) == :role
+    assert Layout.next_focus(node, :email).id == :role
+    assert Layout.previous_focus(node, :email).id == :name
+  end
 end

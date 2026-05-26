@@ -43,6 +43,24 @@ defmodule Cringe.Layout do
     end
   end
 
+  @spec next_focus(Node.t(), term() | nil) :: Node.t() | nil
+  def next_focus(%Node{} = node, current_id \\ nil) do
+    move_focus(node, current_id, 1)
+  end
+
+  @spec previous_focus(Node.t(), term() | nil) :: Node.t() | nil
+  def previous_focus(%Node{} = node, current_id \\ nil) do
+    move_focus(node, current_id, -1)
+  end
+
+  @spec focus_id(Node.t(), :next | :previous, term() | nil) :: term() | nil
+  def focus_id(node, direction, current_id \\ nil)
+
+  def focus_id(%Node{} = node, :next, current_id), do: node |> next_focus(current_id) |> node_id()
+
+  def focus_id(%Node{} = node, :previous, current_id),
+    do: node |> previous_focus(current_id) |> node_id()
+
   @spec resize_block([String.t()], keyword()) :: [String.t()]
   def resize_block(lines, opts) do
     width = constrained_width(lines, opts)
@@ -79,6 +97,29 @@ defmodule Cringe.Layout do
   defp contains?(rect, x, y) do
     x >= rect.x and x < rect.x + rect.width and y >= rect.y and y < rect.y + rect.height
   end
+
+  defp move_focus(node, current_id, offset) do
+    nodes = focusable(node)
+
+    case nodes do
+      [] -> nil
+      [_ | _] -> Enum.at(nodes, next_focus_index(nodes, current_id, offset))
+    end
+  end
+
+  defp next_focus_index(_nodes, nil, 1), do: 0
+  defp next_focus_index(nodes, nil, -1), do: length(nodes) - 1
+
+  defp next_focus_index(nodes, current_id, offset) do
+    current_index = Enum.find_index(nodes, &(&1.id == current_id)) || fallback_index(offset)
+    Integer.mod(current_index + offset, length(nodes))
+  end
+
+  defp fallback_index(1), do: -1
+  defp fallback_index(-1), do: 0
+
+  defp node_id(nil), do: nil
+  defp node_id(%Node{id: id}), do: id
 
   defp constrained_width(lines, opts) do
     if Keyword.has_key?(opts, :width) or Keyword.has_key?(opts, :min_width) or
