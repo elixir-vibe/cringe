@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.5.0 (2026-05-26)
+
 - Avoid linking public docs to the hidden terminal session implementation.
 - Add a form integration test for layout-derived focus navigation.
 - Let the runtime own terminal input session startup and shutdown.

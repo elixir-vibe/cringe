@@ -39,7 +39,7 @@ Add `cringe` to your dependencies:
 ```elixir
 def deps do
   [
-    {:cringe, "~> 0.4.0"}
+    {:cringe, "~> 0.5.0"}
   ]
 end
 ```
