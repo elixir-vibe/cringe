@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.4.0 (2026-05-26)
+
 - Move terminal input ownership into `Cringe.Runtime.TerminalSession`.
 - Add public terminal-cell chunking and wrapping helpers.
 
