@@ -4,7 +4,7 @@ defmodule Cringe.Runtime.Backend.Terminal do
 
   This backend manages terminal presentation concerns around a render stream:
   alternate screen entry, cursor visibility, initial clearing, output writes,
-  and optional raw keyboard input through `Cringe.Runtime.TerminalSession`.
+  and optional raw keyboard input through an internal terminal session.
   """
 
   @behaviour Cringe.Runtime.Backend

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Avoid linking public docs to the hidden terminal session implementation.
+- Add a form integration test for layout-derived focus navigation.
+
 ## 0.4.0 (2026-05-26)
 
 - Move terminal input ownership into `Cringe.Runtime.TerminalSession`.
