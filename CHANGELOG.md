@@ -12,6 +12,7 @@
 - Move ANSI text styling into the draw phase for styled text overlays.
 - Add app driver helpers for key sequences and deterministic awaits.
 - Add focusable layout metadata and coordinate path lookup.
+- Add draw-owned box border and content-rect primitives.
 
 ## 0.2.0 (2026-05-26)
 
