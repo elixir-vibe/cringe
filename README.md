@@ -160,7 +160,22 @@ For OTP trees, start the runtime under its supervisor:
 app = Cringe.Runtime.Supervisor.runtime(supervisor)
 ```
 
-## Focus
+## Layout regions and focus
+
+Layout nodes preserve document IDs, roles, focusability, and coordinates:
+
+```elixir
+layout =
+  box padding: 1 do
+    input(id: :name, value: "Dan")
+  end
+  |> Cringe.Layout.Engine.layout()
+
+Cringe.Layout.find(layout, :name)
+Cringe.Layout.at(layout, 2, 2)
+Cringe.Layout.path_at(layout, 2, 2)
+Cringe.Layout.focusable(layout)
+```
 
 `Cringe.Focus` is a tiny deterministic focus ring:
 
@@ -181,7 +196,7 @@ Document -> Layout.Node tree -> Draw/Canvas -> Frame -> Painter -> Backend
 ```
 
 - Documents are plain Elixir structs built with functions or the DSL.
-- Layout computes positioned nodes, sizes, content rectangles, cursors, and hit regions.
+- Layout computes positioned nodes, sizes, content rectangles, cursors, focus metadata, and hit regions.
 - Draw turns the layout tree into a fixed-size canvas and frame.
 - The painter compares frames and emits terminal updates.
 - Backends write updates to tests, IO devices, or the current terminal.
