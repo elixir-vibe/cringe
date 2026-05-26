@@ -29,6 +29,7 @@ defmodule Cringe.MixProject do
   defp deps do
     [
       {:ghostty, "~> 0.4.9"},
+      {:benchee, "~> 1.3", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:ex_dna, "~> 1.5", only: [:dev, :test], runtime: false},
@@ -40,6 +41,12 @@ defmodule Cringe.MixProject do
 
   defp aliases do
     [
+      bench: [
+        "run bench/render_bench.exs",
+        "run bench/canvas_bench.exs",
+        "run bench/painter_bench.exs",
+        "run bench/input_bench.exs"
+      ],
       ci: [
         "compile --warnings-as-errors",
         "format --check-formatted",
