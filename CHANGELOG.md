@@ -9,6 +9,7 @@
 - Add document IDs, layout node lookup, and coordinate hit testing.
 - Add runtime tick events with configured intervals.
 - Add ticking spinner example.
+- Move ANSI text styling into the draw phase for styled text overlays.
 
 ## 0.2.0 (2026-05-26)
 

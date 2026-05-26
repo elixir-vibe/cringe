@@ -3,7 +3,6 @@ defmodule Cringe.Layout.Engine do
   Lays out document trees into positioned layout nodes.
   """
 
-  alias Cringe.ANSI
   alias Cringe.Document.{Box, Stack, Text}
   alias Cringe.Layout
   alias Cringe.Layout.{Constraint, Node}
@@ -13,27 +12,25 @@ defmodule Cringe.Layout.Engine do
   @spec layout(Cringe.Document.t(), keyword()) :: Node.t()
   def layout(document, opts \\ []) do
     constraint = Constraint.new(opts)
-    ansi? = Keyword.get(opts, :ansi, false)
 
     document
-    |> layout_node(ansi?)
+    |> layout_node()
     |> apply_root_constraint(constraint)
   end
 
-  defp layout_node(%Text{content: content, opts: opts} = document, ansi?) do
+  defp layout_node(%Text{content: content, opts: opts} = document) do
     lines =
       content
       |> String.split("\n", trim: false)
-      |> Enum.map(&ANSI.apply(&1, opts, ansi?))
       |> Layout.resize_block(opts)
 
     Node.new(document, lines, cursor: Keyword.get(opts, :cursor))
   end
 
-  defp layout_node(%Stack{direction: :vertical, children: children, opts: opts} = document, ansi?) do
+  defp layout_node(%Stack{direction: :vertical, children: children, opts: opts} = document) do
     gap = Keyword.get(opts, :gap, 0)
     separator = List.duplicate("", gap)
-    child_nodes = children |> Enum.map(&layout_node(&1, ansi?)) |> position_vertical(gap)
+    child_nodes = children |> Enum.map(&layout_node/1) |> position_vertical(gap)
 
     lines =
       child_nodes
@@ -45,13 +42,10 @@ defmodule Cringe.Layout.Engine do
     Node.new(document, lines, children: child_nodes, cursor: first_cursor(child_nodes))
   end
 
-  defp layout_node(
-         %Stack{direction: :horizontal, children: children, opts: opts} = document,
-         ansi?
-       ) do
+  defp layout_node(%Stack{direction: :horizontal, children: children, opts: opts} = document) do
     gap = Keyword.get(opts, :gap, 0)
     separator = String.duplicate(" ", gap)
-    child_nodes = Enum.map(children, &layout_node(&1, ansi?))
+    child_nodes = Enum.map(children, &layout_node/1)
     blocks = Enum.map(child_nodes, & &1.lines)
     widths = row_widths(children, blocks, gap, Keyword.get(opts, :width))
     height = blocks |> Enum.map(&length/1) |> Enum.max(fn -> 0 end)
@@ -73,10 +67,10 @@ defmodule Cringe.Layout.Engine do
     Node.new(document, lines, children: children, cursor: first_cursor(children))
   end
 
-  defp layout_node(%Box{child: child, opts: opts} = document, ansi?) do
+  defp layout_node(%Box{child: child, opts: opts} = document) do
     padding = Keyword.get(opts, :padding, 0)
     border = Keyword.get(opts, :border, :rounded)
-    child_node = layout_node(child, ansi?)
+    child_node = layout_node(child)
     offset = padding + border_offset(border)
     scroll_y = Keyword.get(opts, :scroll_y, 0)
 
