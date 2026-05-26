@@ -1,5 +1,11 @@
 defmodule Cringe.Measure do
-  @moduledoc false
+  @moduledoc """
+  Terminal-cell measurement and clipping helpers.
+
+  These functions operate on terminal cell width rather than byte size or
+  grapheme count. They account for common wide emoji/CJK graphemes, combining
+  marks, variation selectors, zero-width joiner sequences, and ANSI SGR styling.
+  """
 
   @variation_selector_16 0xFE0F
   @zero_width_joiner 0x200D
@@ -24,6 +30,22 @@ defmodule Cringe.Measure do
     0x2600..0x27BF
   ]
 
+  @doc """
+  Returns the visible terminal-cell width of a string.
+
+      iex> Cringe.Measure.width("abc")
+      3
+
+      iex> Cringe.Measure.width("🚀")
+      2
+
+      iex> Cringe.Measure.width("é")
+      1
+
+      iex> Cringe.Measure.width("\e[31mred\e[0m")
+      3
+
+  """
   @spec width(String.t()) :: non_neg_integer()
   def width(text) when is_binary(text) do
     text
@@ -32,17 +54,59 @@ defmodule Cringe.Measure do
     |> Enum.reduce(0, &(&2 + grapheme_width(&1)))
   end
 
+  @doc """
+  Takes text up to a terminal-cell width.
+
+  The result never splits a grapheme. ANSI SGR sequences are preserved, and an
+  ANSI reset is appended when truncation leaves styling active.
+
+      iex> Cringe.Measure.take("ab🚀cd", 4)
+      "ab🚀"
+
+      iex> Cringe.Measure.take("ab🚀cd", 3)
+      "ab"
+
+      iex> Cringe.Measure.take("\e[31mhello\e[0m", 2)
+      "\e[31mhe\e[0m"
+
+  """
   @spec take(String.t(), non_neg_integer()) :: String.t()
   def take(text, width) when is_binary(text) and is_integer(width) and width >= 0 do
     {result, _visible, active_sgr} = take_ansi(text, width, 0, "", [])
     result <> reset_if_styled(active_sgr)
   end
 
+  @doc """
+  Pads text with spaces until it reaches a terminal-cell width.
+
+      iex> Cringe.Measure.pad("🚀", 4)
+      "🚀  "
+
+      iex> Cringe.Measure.pad("hello", 2)
+      "hello"
+
+  """
   @spec pad(String.t(), non_neg_integer()) :: String.t()
   def pad(text, width) when is_binary(text) and is_integer(width) do
     text <> String.duplicate(" ", max(width - width(text), 0))
   end
 
+  @doc """
+  Fits text to an exact terminal-cell width.
+
+  Text shorter than the target width is padded. Text longer than the target width
+  is clipped. Pass `ellipsis?: true` to reserve one cell for `…` when clipping.
+
+      iex> Cringe.Measure.fit("🚀", 4)
+      "🚀  "
+
+      iex> Cringe.Measure.fit("ab🚀cd", 4)
+      "ab🚀"
+
+      iex> Cringe.Measure.fit("ab🚀cd", 4, ellipsis?: true)
+      "ab…"
+
+  """
   @spec fit(String.t(), non_neg_integer(), keyword()) :: String.t()
   def fit(text, width, opts \\ []) when is_binary(text) and is_integer(width) and width >= 0 do
     cond do
@@ -57,6 +121,18 @@ defmodule Cringe.Measure do
     end
   end
 
+  @doc """
+  Drops text until at least `count` terminal cells are removed.
+
+  ANSI styling is stripped from the result.
+
+      iex> Cringe.Measure.drop("ab🚀cd", 4)
+      "cd"
+
+      iex> Cringe.Measure.drop("ab🚀cd", 3)
+      "cd"
+
+  """
   @spec drop(String.t(), non_neg_integer()) :: String.t()
   def drop(text, count) when is_binary(text) and is_integer(count) and count >= 0 do
     text

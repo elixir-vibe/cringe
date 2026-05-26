@@ -1,6 +1,8 @@
 defmodule Cringe.MeasureTest do
   use ExUnit.Case, async: true
 
+  doctest Cringe.Measure
+
   alias Cringe.Measure
 
   test "counts terminal cells" do

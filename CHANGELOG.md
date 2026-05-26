@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Document `Cringe.Measure` as a public terminal-cell text helper API.
+
 ## 0.3.0 (2026-05-26)
 
 - Replace the `Cringe.Test` helper module with `Cringe.Assertions`, `Cringe.Case`, and `Cringe.Driver`.
