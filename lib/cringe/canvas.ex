@@ -89,12 +89,15 @@ defmodule Cringe.Canvas do
     right = min(x + line_width, clip.x + clip.width)
 
     if y >= clip.y and y < clip.y + clip.height and right > left do
-      visible = line |> Measure.drop(left - x) |> Measure.take(right - left)
+      visible = clipped_text(line, left - x, right - left)
       put(canvas, left, y, visible)
     else
       canvas
     end
   end
+
+  defp clipped_text(line, 0, width), do: Measure.take(line, width)
+  defp clipped_text(line, offset, width), do: line |> Measure.drop(offset) |> Measure.take(width)
 
   defp fit_line(text, width) do
     text

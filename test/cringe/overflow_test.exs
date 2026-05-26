@@ -39,4 +39,41 @@ defmodule Cringe.OverflowTest do
 
     assert frame(document).cursor == nil
   end
+
+  test "clips nested overflow boxes" do
+    document =
+      text("alpha\nbeta\ngamma")
+      |> box(height: 4, overflow: :hidden, scroll_y: 1)
+      |> box(height: 6, overflow: :hidden)
+
+    assert_render(document, """
+    ╭───────╮
+    │╭─────╮│
+    ││beta ││
+    ││gamma││
+    │╰─────╯│
+    ╰───────╯
+    """)
+  end
+
+  test "clips wide graphemes at box edges" do
+    document =
+      text("a🚀b")
+      |> box(width: 4, overflow: :hidden)
+
+    assert_render(document, """
+    ╭──╮
+    │a │
+    ╰──╯
+    """)
+  end
+
+  test "keeps styles balanced inside clipped overflow" do
+    rendered =
+      text("hello", color: :red, width: 2)
+      |> box(width: 4, overflow: :hidden)
+      |> render(ansi: true)
+
+    assert rendered =~ "\e[31mhe\e[0m"
+  end
 end

@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Document `Cringe.Measure` as a public terminal-cell text helper API.
+- Add nested overflow and clipped styled text regression coverage.
 
 ## 0.3.0 (2026-05-26)
 
