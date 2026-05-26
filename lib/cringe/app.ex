@@ -4,7 +4,7 @@ defmodule Cringe.App do
   """
 
   @callback init(keyword()) :: {:ok, term()} | {:stop, term()}
-  @callback handle_event(term(), term()) :: {:noreply, term()} | {:stop, term()}
+  @callback handle_event(Cringe.Event.t(), term()) :: {:noreply, term()} | {:stop, term()}
   @callback render(term()) :: Cringe.Document.t()
 
   defmacro __using__(_opts) do

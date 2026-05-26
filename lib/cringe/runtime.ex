@@ -5,6 +5,8 @@ defmodule Cringe.Runtime do
 
   use GenServer
 
+  alias Cringe.Terminal.KeyDecoder
+
   @default_width 80
   @default_height 24
 
@@ -21,7 +23,7 @@ defmodule Cringe.Runtime do
     GenServer.start_link(__MODULE__, opts, server_opts)
   end
 
-  @spec dispatch(GenServer.server(), term()) :: :ok
+  @spec dispatch(GenServer.server(), Cringe.Event.t()) :: :ok
   def dispatch(server, event), do: GenServer.call(server, {:dispatch, event})
 
   @spec text(GenServer.server()) :: String.t()
@@ -29,6 +31,12 @@ defmodule Cringe.Runtime do
 
   @spec paint(GenServer.server()) :: :ok | {:error, term()}
   def paint(server), do: GenServer.call(server, :paint)
+
+  @spec input(GenServer.server(), binary()) :: :ok | {:error, term()}
+  def input(server, bytes) when is_binary(bytes) do
+    Enum.each(KeyDecoder.decode(bytes), &dispatch(server, &1))
+    paint(server)
+  end
 
   @spec state(GenServer.server()) :: term()
   def state(server), do: GenServer.call(server, :state)

@@ -7,6 +7,7 @@ defmodule Cringe do
   """
 
   alias Cringe.Document.Text
+  alias Cringe.Widgets.{Input, Progress, Select, Spinner}
 
   @doc """
   Builds a text node.
@@ -27,6 +28,30 @@ defmodule Cringe do
   defmacro column(first \\ [], second \\ []), do: Cringe.DSL.column_ast(first, second)
   defmacro row(first \\ [], second \\ []), do: Cringe.DSL.row_ast(first, second)
   defmacro box(first \\ [], second \\ []), do: Cringe.DSL.box_ast(first, second)
+
+  @doc """
+  Builds a render-only progress bar widget.
+  """
+  @spec progress(keyword()) :: Cringe.Document.t()
+  def progress(opts \\ []), do: Progress.new(opts)
+
+  @doc """
+  Builds a render-only spinner widget.
+  """
+  @spec spinner(keyword()) :: Cringe.Document.t()
+  def spinner(opts \\ []), do: Spinner.new(opts)
+
+  @doc """
+  Builds a render-only text input widget.
+  """
+  @spec input(keyword()) :: Cringe.Document.t()
+  def input(opts \\ []), do: Input.new(opts)
+
+  @doc """
+  Builds a render-only select/list widget.
+  """
+  @spec select(keyword()) :: Cringe.Document.t()
+  def select(opts \\ []), do: Select.new(opts)
 
   @doc """
   Renders a terminal document to a string.

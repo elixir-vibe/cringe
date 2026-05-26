@@ -13,8 +13,8 @@ defmodule Cringe.Test do
   @spec event(GenServer.server(), term()) :: :ok
   def event(server, event), do: Cringe.Runtime.dispatch(server, event)
 
-  @spec key(GenServer.server(), atom()) :: :ok
-  def key(server, key), do: event(server, {:key, key})
+  @spec key(GenServer.server(), atom(), keyword()) :: :ok
+  def key(server, key, opts \\ []), do: event(server, Cringe.Event.key(key, opts))
 
   @spec app_text(GenServer.server()) :: String.t()
   def app_text(server), do: Cringe.Runtime.text(server)

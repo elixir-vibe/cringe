@@ -10,7 +10,8 @@ defmodule Cringe.RuntimeTest do
     def init(_opts), do: {:ok, %{count: 0}}
 
     @impl true
-    def handle_event({:key, :up}, state), do: {:noreply, %{state | count: state.count + 1}}
+    def handle_event(%Cringe.Event.Key{key: :up}, state),
+      do: {:noreply, %{state | count: state.count + 1}}
 
     @impl true
     def render(state), do: box(text("Count: #{state.count}"), padding: 1)
@@ -100,5 +101,14 @@ defmodule Cringe.RuntimeTest do
     assert output =~ "Count: 0"
     assert output =~ "\e[?25h"
     assert output =~ "\e[?1049l"
+  end
+
+  test "decodes terminal input and repaints" do
+    assert {:ok, app} = Cringe.Test.start(Counter, backend: Cringe.Runtime.Backend.Test)
+
+    assert :ok = Cringe.Runtime.input(app, "\e[A")
+    assert %{count: 1} = Cringe.Runtime.state(app)
+    assert [output] = Cringe.Runtime.Backend.Test.frames(app)
+    assert output =~ "Count: 1"
   end
 end
