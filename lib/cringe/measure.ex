@@ -43,6 +43,20 @@ defmodule Cringe.Measure do
     text <> String.duplicate(" ", max(width - width(text), 0))
   end
 
+  @spec fit(String.t(), non_neg_integer(), keyword()) :: String.t()
+  def fit(text, width, opts \\ []) when is_binary(text) and is_integer(width) and width >= 0 do
+    cond do
+      width(text) <= width ->
+        pad(text, width)
+
+      Keyword.get(opts, :ellipsis?, false) and width > 0 ->
+        take(text, width - 1) <> "…"
+
+      true ->
+        take(text, width)
+    end
+  end
+
   defp take_ansi(_text, width, visible, acc, active_sgr) when visible >= width do
     {acc, visible, active_sgr}
   end

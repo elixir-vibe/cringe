@@ -29,4 +29,10 @@ defmodule Cringe.MeasureTest do
   test "pads by terminal cells" do
     assert Measure.pad("🚀", 4) == "🚀  "
   end
+
+  test "fits text to terminal cells" do
+    assert Measure.fit("🚀", 4) == "🚀  "
+    assert Measure.fit("ab🚀cd", 4) == "ab🚀"
+    assert Measure.fit("ab🚀cd", 4, ellipsis?: true) == "ab…"
+  end
 end
