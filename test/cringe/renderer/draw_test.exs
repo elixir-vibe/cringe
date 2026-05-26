@@ -23,4 +23,16 @@ defmodule Cringe.Renderer.DrawTest do
 
     assert frame.cursor == {1, 5}
   end
+
+  test "draws stack children from geometry" do
+    frame =
+      column gap: 1 do
+        text("one")
+        text("two")
+      end
+      |> Engine.layout()
+      |> Draw.frame(width: 5, height: 3)
+
+    assert frame.lines == ["one  ", "     ", "two  "]
+  end
 end
