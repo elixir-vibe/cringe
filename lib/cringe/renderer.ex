@@ -3,9 +3,9 @@ defmodule Cringe.Renderer do
   Renders Cringe documents into terminal text.
   """
 
-  alias Cringe.Canvas
   alias Cringe.Frame
   alias Cringe.Layout.Engine
+  alias Cringe.Renderer.Draw
 
   @type render_opts :: [width: pos_integer(), height: pos_integer(), ansi: boolean()]
 
@@ -18,15 +18,8 @@ defmodule Cringe.Renderer do
 
   @spec frame(Cringe.Document.t(), render_opts()) :: Frame.t()
   def frame(document, opts \\ []) do
-    node = Engine.layout(document, opts)
-
-    width = Keyword.get(opts, :width, node.rect.width)
-    height = Keyword.get(opts, :height, node.rect.height)
-
-    width
-    |> Canvas.new(height)
-    |> Canvas.put_block(0, 0, node.lines)
-    |> Canvas.lines()
-    |> Frame.new(cursor: node.cursor)
+    document
+    |> Engine.layout(opts)
+    |> Draw.frame(opts)
   end
 end
