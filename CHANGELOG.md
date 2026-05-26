@@ -18,6 +18,7 @@
 - Add terminal-cell-aware `Cringe.Measure.fit/3`.
 - Add layout focus navigation helpers.
 - Add clipped canvas block writes.
+- Draw boxes recursively from layout geometry with clipped overflow.
 
 ## 0.2.0 (2026-05-26)
 
