@@ -6,7 +6,7 @@ Cringe is an experiment in building interactive terminal apps with declarative l
 
 ## Status
 
-Early alpha skeleton. The API is not stable yet.
+Early alpha. The API is not stable yet, but Cringe is usable for small interactive terminal experiments.
 
 ## First document
 
@@ -36,7 +36,7 @@ column gap: 1 do
 end
 ```
 
-## Tiny app
+## Interactive app
 
 ```elixir
 defmodule Counter do
@@ -73,9 +73,19 @@ Once published, add `cringe` to your dependencies:
 ```elixir
 def deps do
   [
-    {:cringe, "~> 0.1"}
+    {:cringe, "~> 0.2"}
   ]
 end
 ```
 
-Documentation will be published at <https://hexdocs.pm/cringe>.
+Documentation is published at <https://hexdocs.pm/cringe>.
+
+## Benchmarks
+
+Cringe includes local Benchee benchmarks for render, canvas, painter, and input paths:
+
+```sh
+mix bench
+```
+
+Benchmarks are for local regression checks and are not part of CI.
