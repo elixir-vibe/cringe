@@ -4,14 +4,16 @@ defmodule Cringe.Runtime.Backend.Terminal do
 
   This backend manages terminal presentation concerns around a render stream:
   alternate screen entry, cursor visibility, initial clearing, output writes,
-  and optional raw keyboard input through `Ghostty.TTY`.
+  and optional raw keyboard input through `Cringe.Runtime.TerminalSession`.
   """
 
   @behaviour Cringe.Runtime.Backend
 
+  alias Cringe.Runtime.TerminalSession
+
   @type state :: %{
           device: IO.device(),
-          tty: GenServer.server() | nil,
+          terminal_session: GenServer.server() | nil,
           alternate_screen?: boolean(),
           hide_cursor?: boolean()
         }
@@ -20,10 +22,10 @@ defmodule Cringe.Runtime.Backend.Terminal do
   def init(opts) do
     device = Keyword.get(opts, :device, :stdio)
 
-    with {:ok, tty} <- maybe_start_tty(opts, device) do
+    with {:ok, terminal_session} <- maybe_start_terminal_session(opts, device) do
       state = %{
         device: device,
-        tty: tty,
+        terminal_session: terminal_session,
         alternate_screen?: Keyword.get(opts, :alternate_screen, false),
         hide_cursor?: Keyword.get(opts, :hide_cursor, true)
       }
@@ -42,28 +44,27 @@ defmodule Cringe.Runtime.Backend.Terminal do
   @impl true
   def stop(state) do
     write(state, shutdown_sequence(state))
-    stop_tty(state.tty)
+    stop_terminal_session(state.terminal_session)
     :ok
   end
 
-  defp maybe_start_tty(opts, device) do
+  defp maybe_start_terminal_session(opts, device) do
     input? = Keyword.get(opts, :input, device == :stdio)
 
     if input? do
-      opts
-      |> Keyword.take([:backend, :disable_otp_reader, :raw, :takeover])
-      |> Keyword.put_new(:owner, self())
-      |> Ghostty.TTY.start_link()
+      TerminalSession.start_link(self(), opts)
     else
       {:ok, nil}
     end
   end
 
-  defp write(%{tty: nil, device: device}, output), do: IO.write(device, output)
-  defp write(%{tty: tty}, output), do: Ghostty.TTY.write(tty, output)
+  defp write(%{terminal_session: nil, device: device}, output), do: IO.write(device, output)
 
-  defp stop_tty(nil), do: :ok
-  defp stop_tty(tty), do: GenServer.stop(tty)
+  defp write(%{terminal_session: terminal_session}, output),
+    do: TerminalSession.write(terminal_session, output)
+
+  defp stop_terminal_session(nil), do: :ok
+  defp stop_terminal_session(terminal_session), do: GenServer.stop(terminal_session)
 
   defp startup_sequence(state) do
     [
