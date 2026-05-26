@@ -15,6 +15,12 @@ defmodule Cringe.Widgets.Select do
     marker = Keyword.get(opts, :marker)
     blank = String.duplicate(" ", Cringe.Measure.width(marker))
 
+    container_opts =
+      opts
+      |> Keyword.drop([:focused, :marker, :options, :selected])
+      |> Keyword.put_new(:role, :select)
+      |> Keyword.put_new(:focusable, true)
+
     options
     |> Enum.with_index()
     |> Enum.map(fn {option, index} ->
@@ -22,7 +28,7 @@ defmodule Cringe.Widgets.Select do
       style = row_style(index == selected, focused?)
       Cringe.text(prefix <> " " <> to_string(option), style)
     end)
-    |> Stack.new(:vertical, Keyword.drop(opts, [:focused, :marker, :options, :selected]))
+    |> Stack.new(:vertical, container_opts)
   end
 
   @spec update(non_neg_integer(), Cringe.Event.t(), [term()]) ::

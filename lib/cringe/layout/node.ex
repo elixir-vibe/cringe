@@ -8,7 +8,18 @@ defmodule Cringe.Layout.Node do
   alias Cringe.Rect
 
   @enforce_keys [:document, :rect, :size, :content_rect, :lines]
-  defstruct [:document, :rect, :size, :content_rect, :lines, children: [], cursor: nil, id: nil]
+  defstruct [
+    :document,
+    :rect,
+    :size,
+    :content_rect,
+    :lines,
+    children: [],
+    cursor: nil,
+    id: nil,
+    role: nil,
+    focusable?: false
+  ]
 
   @type t :: %__MODULE__{
           document: Cringe.Document.t(),
@@ -18,7 +29,9 @@ defmodule Cringe.Layout.Node do
           lines: [String.t()],
           children: [t()],
           cursor: {pos_integer(), pos_integer()} | nil,
-          id: term() | nil
+          id: term() | nil,
+          role: atom() | nil,
+          focusable?: boolean()
         }
 
   @spec new(Cringe.Document.t(), [String.t()], keyword()) :: t()
@@ -27,7 +40,9 @@ defmodule Cringe.Layout.Node do
     y = Keyword.get(opts, :y, 0)
     children = Keyword.get(opts, :children, [])
     cursor = Keyword.get(opts, :cursor)
-    id = Keyword.get(opts, :id, document_id(document))
+    id = Keyword.get(opts, :id, document_opt(document, :id))
+    role = Keyword.get(opts, :role, document_opt(document, :role))
+    focusable? = Keyword.get(opts, :focusable?, document_focusable?(document, role))
     size = Size.new(width(lines), length(lines))
     rect = Rect.new(x, y, size.width, size.height)
 
@@ -39,12 +54,19 @@ defmodule Cringe.Layout.Node do
       lines: lines,
       children: children,
       cursor: cursor,
-      id: id
+      id: id,
+      role: role,
+      focusable?: focusable?
     }
   end
 
-  defp document_id(%{opts: opts}) when is_list(opts), do: Keyword.get(opts, :id)
-  defp document_id(_document), do: nil
+  defp document_opt(%{opts: opts}, key) when is_list(opts), do: Keyword.get(opts, key)
+  defp document_opt(_document, _key), do: nil
+
+  defp document_focusable?(document, role) do
+    document_opt(document, :focusable) == true or document_opt(document, :focusable?) == true or
+      role in [:input, :select]
+  end
 
   defp width(lines) do
     lines

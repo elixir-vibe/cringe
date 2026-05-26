@@ -22,6 +22,27 @@ defmodule Cringe.Layout do
     end
   end
 
+  @spec path_at(Node.t(), non_neg_integer(), non_neg_integer()) :: [Node.t()]
+  def path_at(%Node{} = node, x, y) when is_integer(x) and is_integer(y) do
+    if contains?(node.rect, x, y) do
+      child_path = Enum.find_value(node.children, &path_at(&1, x - node.rect.x, y - node.rect.y))
+      [node | child_path || []]
+    else
+      []
+    end
+  end
+
+  @spec focusable(Node.t()) :: [Node.t()]
+  def focusable(%Node{} = node) do
+    descendants = Enum.flat_map(node.children, &focusable/1)
+
+    if node.focusable? do
+      [node | descendants]
+    else
+      descendants
+    end
+  end
+
   @spec resize_block([String.t()], keyword()) :: [String.t()]
   def resize_block(lines, opts) do
     width = constrained_width(lines, opts)

@@ -29,6 +29,8 @@ defmodule Cringe.Widgets.Input do
       |> Keyword.drop([:value, :placeholder, :focused, :width, :prompt, :placeholder_color])
       |> maybe_put(:color, color)
       |> maybe_put(:cursor, cursor(focused?, prompt, state))
+      |> Keyword.put_new(:role, :input)
+      |> Keyword.put_new(:focusable, true)
 
     Cringe.text(prompt <> visible_value, Keyword.put(text_opts, :width, width))
   end

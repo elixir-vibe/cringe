@@ -32,4 +32,29 @@ defmodule Cringe.LayoutRegionsTest do
     assert Layout.at(node, 0, 0).id == nil
     assert Layout.at(node, 200, 200) == nil
   end
+
+  test "returns node paths at coordinates" do
+    node =
+      box id: :shell, padding: 1 do
+        input(id: :name, value: "Dan")
+      end
+      |> Engine.layout()
+
+    assert [:shell, :name] = node |> Layout.path_at(2, 2) |> Enum.map(& &1.id)
+    assert [] = Layout.path_at(node, 200, 200)
+  end
+
+  test "lists focusable layout nodes" do
+    node =
+      column gap: 1 do
+        input(id: :name, value: "Dan")
+        select(id: :role, options: ["Admin", "User"])
+        text("not focusable", id: :label)
+      end
+      |> Engine.layout()
+
+    assert [:name, :role] = node |> Layout.focusable() |> Enum.map(& &1.id)
+    assert Layout.find(node, :name).role == :input
+    assert Layout.find(node, :role).role == :select
+  end
 end
