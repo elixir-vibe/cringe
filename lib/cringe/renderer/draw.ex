@@ -11,6 +11,7 @@ defmodule Cringe.Renderer.Draw do
   alias Cringe.Layout.Node
   alias Cringe.Rect
   alias Cringe.Renderer.Draw.Box, as: BoxDraw
+  alias Cringe.Renderer.Draw.Context
 
   @spec frame(Node.t(), keyword()) :: Frame.t()
   def frame(%Node{} = node, opts \\ []) do
@@ -25,49 +26,56 @@ defmodule Cringe.Renderer.Draw do
 
   @spec draw(Node.t(), Canvas.t(), keyword()) :: Canvas.t()
   def draw(%Node{} = node, %Canvas{} = canvas, opts \\ []) do
-    draw_at(canvas, node, {node.rect.x, node.rect.y}, opts)
+    canvas
+    |> Context.new(opts)
+    |> draw_at(node, {node.rect.x, node.rect.y})
+    |> Map.fetch!(:canvas)
   end
 
   defp draw_at(
-         %Canvas{} = canvas,
+         %Context{} = context,
          %Node{document: %Text{content: content, opts: text_opts}} = node,
-         {x, y},
-         opts
+         {x, y}
        ) do
-    ansi? = Keyword.get(opts, :ansi, false)
-
     lines =
       content
       |> String.split("\n", trim: false)
       |> Layout.resize_block(text_draw_opts(text_opts, node))
-      |> Enum.map(&ANSI.apply(&1, text_opts, ansi?))
+      |> Enum.map(&ANSI.apply(&1, text_opts, context.ansi?))
 
-    put_block(canvas, x, y, lines, opts)
+    Context.put_block(context, x, y, lines)
   end
 
-  defp draw_at(%Canvas{} = canvas, %Node{document: %Stack{}} = node, origin, opts) do
-    draw_children(canvas, node, origin, opts)
+  defp draw_at(%Context{} = context, %Node{document: %Stack{}} = node, origin) do
+    draw_children(context, node, origin)
   end
 
-  defp draw_at(%Canvas{} = canvas, %Node{document: %Box{opts: box_opts}} = node, {x, y}, opts) do
+  defp draw_at(%Context{} = context, %Node{document: %Box{opts: box_opts}} = node, {x, y}) do
     rect = Rect.new(x, y, node.rect.width, node.rect.height)
-    clip = box_clip(rect, box_opts)
 
-    canvas
-    |> BoxDraw.border(rect, Keyword.get(box_opts, :border, :rounded))
-    |> draw_box_children(node, {x, y}, opts, clip, Keyword.get(box_opts, :scroll_y, 0))
+    context
+    |> Context.with_canvas(
+      BoxDraw.border(context.canvas, rect, Keyword.get(box_opts, :border, :rounded))
+    )
+    |> draw_box_children(
+      node,
+      {x, y},
+      box_clip(rect, box_opts),
+      Keyword.get(box_opts, :scroll_y, 0)
+    )
   end
 
-  defp draw_box_children(canvas, node, {x, y}, opts, clip, scroll_y) do
-    Enum.reduce(node.children, canvas, fn child, acc ->
-      origin = {x + child.rect.x, y + child.rect.y - scroll_y}
-      draw_at(acc, child, origin, Keyword.put(opts, :clip, clip))
+  defp draw_box_children(%Context{} = context, node, {x, y}, clip, scroll_y) do
+    context = Context.clip(context, clip)
+
+    Enum.reduce(node.children, context, fn child, acc ->
+      draw_at(acc, child, {x + child.rect.x, y + child.rect.y - scroll_y})
     end)
   end
 
-  defp draw_children(%Canvas{} = canvas, %Node{} = node, {x, y}, opts) do
-    Enum.reduce(node.children, canvas, fn child, acc ->
-      draw_at(acc, child, {x + child.rect.x, y + child.rect.y}, opts)
+  defp draw_children(%Context{} = context, %Node{} = node, {x, y}) do
+    Enum.reduce(node.children, context, fn child, acc ->
+      draw_at(acc, child, {x + child.rect.x, y + child.rect.y})
     end)
   end
 
@@ -84,13 +92,6 @@ defmodule Cringe.Renderer.Draw do
         Keyword.get(opts, :padding, 0),
         Keyword.get(opts, :border, :rounded)
       )
-    end
-  end
-
-  defp put_block(canvas, x, y, lines, opts) do
-    case Keyword.get(opts, :clip) do
-      nil -> Canvas.put_block(canvas, x, y, lines)
-      %Rect{} = clip -> Canvas.put_block(canvas, x, y, lines, clip: clip)
     end
   end
 end

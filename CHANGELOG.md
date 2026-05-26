@@ -22,6 +22,7 @@
 - Stop composing child content into stack and box layout lines.
 - Draw text from document content and layout geometry.
 - Move repeating runtime ticks into a tick manager process.
+- Add a draw context for ANSI and nested clipping state.
 
 ## 0.2.0 (2026-05-26)
 
