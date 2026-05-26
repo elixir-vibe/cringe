@@ -1,14 +1,8 @@
 # Cringe
 
-OTP-native terminal UI for Elixir.
+OTP-native terminal UI toolkit for Elixir.
 
-Cringe is an experiment in building interactive terminal apps with declarative layouts, supervised runtimes, semantic input events, render-only widgets, and ExUnit-friendly render assertions. The name is a joke; the goal is serious terminal UI ergonomics for the BEAM.
-
-## Status
-
-Early alpha. The API is not stable yet, but Cringe is usable for small interactive terminal experiments.
-
-## First document
+Cringe helps you build terminal interfaces with plain Elixir data, supervised processes, semantic input events, and ExUnit-friendly rendering. The name is a joke; the goal is serious terminal UI ergonomics for the BEAM.
 
 ```elixir
 use Cringe
@@ -16,41 +10,193 @@ use Cringe
 box padding: 1 do
   column gap: 1 do
     text("Cringe", color: :green, bold: true)
-    text("Terminal UI for the BEAM")
+    text("Terminal UI for Elixir")
+    progress(value: 0.42, width: 16, label: "Build")
   end
 end
-|> render(width: 80, ansi: true)
+|> render(ansi: true)
 |> IO.puts()
 ```
 
-## Render-only widgets
+## Status
+
+Cringe is early alpha. It is useful for experiments, demos, small tools, and for exploring terminal UI design on the BEAM. APIs may change before `1.0`.
+
+## Why Cringe?
+
+- **Plain Elixir documents** — compose text, rows, columns, boxes, and widgets without a template language.
+- **OTP-native runtime** — apps are regular supervised processes with explicit state and event handling.
+- **Ghostty-backed terminal input** — keyboard decoding and current-terminal integration use the `ghostty` package instead of hand-rolled TTY parsing.
+- **Semantic events** — apps handle `%Cringe.Event.Key{}`, `%Cringe.Event.Text{}`, `%Cringe.Event.Resize{}`, and `%Cringe.Event.Tick{}`.
+- **Testable rendering** — assert terminal output with normal ExUnit heredocs.
+- **Small widget layer** — render inputs, selects, progress bars, and spinners while keeping app state explicit.
+- **Canvas + painter pipeline** — render fixed-size frames and repaint changed lines efficiently.
+
+## Installation
+
+Add `cringe` to your dependencies:
+
+```elixir
+def deps do
+  [
+    {:cringe, "~> 0.2.0"}
+  ]
+end
+```
+
+Documentation: <https://hexdocs.pm/cringe>
+
+## Documents
+
+Import the DSL with `use Cringe` or `import Cringe`:
 
 ```elixir
 use Cringe
 
 column gap: 1 do
-  spinner(frame: 2, label: "Loading")
-  progress(value: 0.42, width: 16, label: "Build")
-  input(value: "cringe", focused: true, width: 24)
-  select(options: ["Dashboard", "Logs", "Settings"], selected: 1)
+  text("Deploy", color: :green, bold: true)
+  text("Building assets")
+  progress(value: 0.7, width: 20)
+end
+|> render(ansi: true)
+```
+
+Core building blocks:
+
+```elixir
+text("hello", color: :green, bold: true)
+row([text("left"), text("right")], gap: 2)
+column([text("one"), text("two")], gap: 1)
+box(text("inside"), padding: 1)
+```
+
+Block syntax is available for containers:
+
+```elixir
+box padding: 1 do
+  column gap: 1 do
+    text("Title")
+    text("Body")
+  end
 end
 ```
 
-## Interactive app
+## Widgets
+
+Widgets are render-only by default. You keep state in your app and pass it in explicitly.
+
+```elixir
+column gap: 1 do
+  spinner(frame: 2, label: "Loading")
+  progress(value: 0.42, width: 16, label: "Build")
+  input(value: "cringe", focused: true, width: 24)
+  select(options: ["Dashboard", "Logs", "Settings"], selected: 1, focused: true)
+end
+```
+
+Cursor-aware input state is available when you need editing behavior:
+
+```elixir
+alias Cringe.Widgets.Input
+alias Cringe.Widgets.Input.State
+
+state = State.new("hello", cursor: 5)
+{:ok, state} = Input.update(state, Cringe.Event.text("!"))
+```
+
+Selects expose the same explicit update style:
+
+```elixir
+alias Cringe.Widgets.Select
+
+{:ok, selected} = Select.update(0, Cringe.Event.key(:down), ["one", "two"])
+```
+
+## Interactive apps
+
+Cringe apps are modules that use `Cringe.App`:
 
 ```elixir
 defmodule Counter do
   use Cringe.App
 
   def init(_opts), do: {:ok, %{count: 0}}
-  def handle_event(%Cringe.Event.Key{key: :up}, state), do: {:noreply, %{state | count: state.count + 1}}
-  def render(state), do: box(text("Count: #{state.count}"), padding: 1)
+
+  def handle_event(%Cringe.Event.Key{key: :up}, state),
+    do: {:noreply, %{state | count: state.count + 1}}
+
+  def handle_event(%Cringe.Event.Key{key: :down}, state),
+    do: {:noreply, %{state | count: state.count - 1}}
+
+  def handle_event(%Cringe.Event.Text{text: "q"}, _state),
+    do: {:stop, :normal}
+
+  def render(state) do
+    box padding: 1 do
+      column gap: 1 do
+        text("Counter", color: :green, bold: true)
+        text("Count: #{state.count}")
+        text("Use arrows, q quits", color: :bright_black)
+      end
+    end
+  end
 end
 
-{:ok, app} = Cringe.run(Counter, backend: Cringe.Runtime.Backend.Terminal)
-Cringe.Runtime.dispatch(app, Cringe.Event.key(:up))
+{:ok, app} =
+  Cringe.run(Counter,
+    backend: {Cringe.Runtime.Backend.Terminal, alternate_screen: true},
+    ansi: true
+  )
+
 Cringe.Runtime.paint(app)
 ```
+
+The terminal backend uses `Ghostty.TTY` for current-terminal input when running against `:stdio`.
+
+## Focus
+
+`Cringe.Focus` is a tiny deterministic focus ring:
+
+```elixir
+focus = Cringe.Focus.new([:name, :email, :role])
+focus = Cringe.Focus.next(focus)
+Cringe.Focus.focused?(focus, :email)
+```
+
+The form example shows this with inputs and selects.
+
+## Testing
+
+Cringe test helpers keep expected terminal output readable in normal ExUnit assertions:
+
+```elixir
+defmodule MyUITest do
+  use ExUnit.Case, async: true
+
+  import Cringe
+  import Cringe.Test, only: [assert_render: 2]
+
+  test "renders a box" do
+    assert_render box(text("hi"), padding: 1), """
+    ╭────╮
+    │    │
+    │ hi │
+    │    │
+    ╰────╯
+    """
+  end
+end
+```
+
+For apps:
+
+```elixir
+{:ok, app} = Cringe.Test.start(Counter)
+Cringe.Test.key(app, :up)
+Cringe.Test.assert_text(app, "...")
+```
+
+## Examples
 
 Run examples locally:
 
@@ -66,19 +212,7 @@ mix run examples/interactive_input.exs
 mix run examples/form.exs
 ```
 
-## Installation
-
-Once published, add `cringe` to your dependencies:
-
-```elixir
-def deps do
-  [
-    {:cringe, "~> 0.2"}
-  ]
-end
-```
-
-Documentation is published at <https://hexdocs.pm/cringe>.
+The interactive examples use the terminal backend. `q` or Ctrl+C exits where supported.
 
 ## Benchmarks
 
@@ -89,3 +223,14 @@ mix bench
 ```
 
 Benchmarks are for local regression checks and are not part of CI.
+
+## Development
+
+```sh
+mix deps.get
+mix ci
+```
+
+## License
+
+MIT © 2026 Danila Poyarkov
