@@ -1,8 +1,7 @@
 defmodule Cringe.OverflowTest do
   use ExUnit.Case, async: true
 
-  import Cringe
-  import Cringe.Test, only: [assert_render: 2]
+  use Cringe.Case
 
   test "clips box content when overflow is hidden" do
     document =

@@ -1,26 +1,9 @@
-defmodule Cringe.Test do
+defmodule Cringe.Assertions do
   @moduledoc """
-  Test helpers for Cringe apps and documents.
+  ExUnit assertions for Cringe documents and apps.
   """
 
   import ExUnit.Assertions
-
-  @spec start(module(), keyword()) :: GenServer.on_start()
-  def start(app, opts \\ []) do
-    Cringe.Runtime.start_link(Keyword.put(opts, :app, app))
-  end
-
-  @spec event(GenServer.server(), term()) :: :ok
-  def event(server, event), do: Cringe.Runtime.dispatch(server, event)
-
-  @spec key(GenServer.server(), atom(), keyword()) :: :ok
-  def key(server, key, opts \\ []), do: event(server, Cringe.Event.key(key, opts))
-
-  @spec app_text(GenServer.server()) :: String.t()
-  def app_text(server), do: Cringe.Runtime.text(server)
-
-  @spec rendered(Cringe.Document.t(), keyword()) :: String.t()
-  def rendered(document, opts \\ []), do: Cringe.render(document, opts)
 
   @doc """
   Normalizes an expected multiline heredoc for render assertions.
@@ -40,13 +23,14 @@ defmodule Cringe.Test do
   defmacro assert_render(document, expected, opts \\ []) do
     quote do
       assert Cringe.render(unquote(document), unquote(opts)) ==
-               Cringe.Test.clean_heredoc(unquote(expected))
+               Cringe.Assertions.clean_heredoc(unquote(expected))
     end
   end
 
-  defmacro assert_text(server, expected) do
+  defmacro assert_app_text(app, expected) do
     quote do
-      assert Cringe.Runtime.text(unquote(server)) == Cringe.Test.clean_heredoc(unquote(expected))
+      assert Cringe.Driver.text(unquote(app)) ==
+               Cringe.Assertions.clean_heredoc(unquote(expected))
     end
   end
 

@@ -1,8 +1,7 @@
 defmodule Cringe.WidgetsTest do
   use ExUnit.Case, async: true
 
-  import Cringe
-  import Cringe.Test, only: [assert_render: 2]
+  use Cringe.Case
 
   alias Cringe.Widgets.Input
   alias Cringe.Widgets.Input.State

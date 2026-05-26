@@ -1,8 +1,7 @@
 defmodule Cringe.RendererTest do
   use ExUnit.Case, async: true
 
-  import Cringe
-  import Cringe.Test, only: [assert_render: 2]
+  use Cringe.Case
 
   test "renders text documents" do
     assert text("hello") |> render() == "hello"

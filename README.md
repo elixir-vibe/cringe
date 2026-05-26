@@ -173,8 +173,7 @@ Cringe test helpers keep expected terminal output readable in normal ExUnit asse
 defmodule MyUITest do
   use ExUnit.Case, async: true
 
-  import Cringe
-  import Cringe.Test, only: [assert_render: 2]
+  use Cringe.Case
 
   test "renders a box" do
     assert_render box(text("hi"), padding: 1), """
@@ -191,9 +190,9 @@ end
 For apps:
 
 ```elixir
-{:ok, app} = Cringe.Test.start(Counter)
-Cringe.Test.key(app, :up)
-Cringe.Test.assert_text(app, "...")
+{:ok, app} = Cringe.Driver.start(Counter)
+Cringe.Driver.key(app, :up)
+assert_app_text(app, "...")
 ```
 
 ## Examples

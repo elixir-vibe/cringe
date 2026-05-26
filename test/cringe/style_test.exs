@@ -1,8 +1,7 @@
 defmodule Cringe.StyleTest do
   use ExUnit.Case, async: true
 
-  import Cringe
-  import Cringe.Test, only: [assert_render: 3]
+  use Cringe.Case
 
   test "renders ANSI styles when enabled" do
     assert text("ok", color: :green, bold: true) |> render(ansi: true) == "\e[1;32mok\e[0m"

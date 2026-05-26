@@ -2,7 +2,7 @@ defmodule Cringe.DSLTest do
   use ExUnit.Case, async: true
 
   use Cringe
-  import Cringe.Test, only: [assert_render: 2]
+  use Cringe.Case
 
   test "supports block-oriented document syntax" do
     document =

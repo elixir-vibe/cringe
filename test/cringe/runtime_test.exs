@@ -1,7 +1,11 @@
 defmodule Cringe.RuntimeTest do
   use ExUnit.Case, async: true
 
-  import Cringe.Test, only: [assert_text: 2]
+  import Cringe.Assertions, only: [assert_app_text: 2]
+
+  alias Cringe.Driver
+  alias Cringe.Runtime
+  alias Cringe.Runtime.Backend.{IO, Terminal, Test}
 
   defmodule Counter do
     use Cringe.App
@@ -21,9 +25,9 @@ defmodule Cringe.RuntimeTest do
   end
 
   test "runs app lifecycle and dispatches events" do
-    assert {:ok, app} = Cringe.Test.start(Counter)
+    assert {:ok, app} = Driver.start(Counter)
 
-    assert_text(app, """
+    assert_app_text(app, """
     ╭──────────╮
     │          │
     │ Count: 0 │
@@ -31,9 +35,9 @@ defmodule Cringe.RuntimeTest do
     ╰──────────╯
     """)
 
-    assert :ok = Cringe.Test.key(app, :up)
+    assert :ok = Driver.key(app, :up)
 
-    assert_text(app, """
+    assert_app_text(app, """
     ╭──────────╮
     │          │
     │ Count: 1 │
@@ -46,11 +50,11 @@ defmodule Cringe.RuntimeTest do
     {:ok, device} = StringIO.open("")
 
     assert {:ok, app} =
-             Cringe.Test.start(Counter,
-               backend: {Cringe.Runtime.Backend.IO, device: device}
+             Driver.start(Counter,
+               backend: {IO, device: device}
              )
 
-    assert :ok = Cringe.Runtime.paint(app)
+    assert :ok = Runtime.paint(app)
     assert {_input, output} = StringIO.contents(device)
 
     assert output =~ "\e[H\e[2J"
@@ -58,31 +62,31 @@ defmodule Cringe.RuntimeTest do
   end
 
   test "accepts a backend module without options" do
-    assert {:ok, app} = Cringe.Test.start(Counter, backend: Cringe.Runtime.Backend.Test)
+    assert {:ok, app} = Driver.start(Counter, backend: Test)
 
-    assert :ok = Cringe.Runtime.paint(app)
-    assert [output] = Cringe.Runtime.Backend.Test.frames(app)
+    assert :ok = Runtime.paint(app)
+    assert [output] = Test.frames(app)
     assert output =~ "\e[H\e[2J"
     assert output =~ "Count: 0"
   end
 
   test "skips backend writes when a repaint has no changed lines" do
-    assert {:ok, app} = Cringe.Test.start(Counter, backend: Cringe.Runtime.Backend.Test)
+    assert {:ok, app} = Driver.start(Counter, backend: Test)
 
-    assert :ok = Cringe.Runtime.paint(app)
-    assert :ok = Cringe.Runtime.paint(app)
+    assert :ok = Runtime.paint(app)
+    assert :ok = Runtime.paint(app)
 
-    assert [_first_output] = Cringe.Runtime.Backend.Test.frames(app)
+    assert [_first_output] = Test.frames(app)
   end
 
   test "subsequent paints write changed lines only" do
-    assert {:ok, app} = Cringe.Test.start(Counter, backend: Cringe.Runtime.Backend.Test)
+    assert {:ok, app} = Driver.start(Counter, backend: Test)
 
-    assert :ok = Cringe.Runtime.paint(app)
-    assert :ok = Cringe.Test.key(app, :up)
-    assert :ok = Cringe.Runtime.paint(app)
+    assert :ok = Runtime.paint(app)
+    assert :ok = Driver.key(app, :up)
+    assert :ok = Runtime.paint(app)
 
-    assert [_first_output, next_output] = Cringe.Runtime.Backend.Test.frames(app)
+    assert [_first_output, next_output] = Test.frames(app)
     assert next_output =~ "Count: 1"
     refute next_output =~ "\e[H\e[2J"
   end
@@ -91,11 +95,11 @@ defmodule Cringe.RuntimeTest do
     {:ok, device} = StringIO.open("")
 
     assert {:ok, app} =
-             Cringe.Test.start(Counter,
-               backend: {Cringe.Runtime.Backend.Terminal, device: device, alternate_screen: true}
+             Driver.start(Counter,
+               backend: {Terminal, device: device, alternate_screen: true}
              )
 
-    assert :ok = Cringe.Runtime.paint(app)
+    assert :ok = Runtime.paint(app)
     assert :ok = GenServer.stop(app)
     assert {_input, output} = StringIO.contents(device)
 
@@ -107,31 +111,31 @@ defmodule Cringe.RuntimeTest do
   end
 
   test "decodes terminal input and repaints" do
-    assert {:ok, app} = Cringe.Test.start(Counter, backend: Cringe.Runtime.Backend.Test)
+    assert {:ok, app} = Driver.start(Counter, backend: Test)
 
-    assert :ok = Cringe.Runtime.input(app, "\e[A")
-    assert %{count: 1} = Cringe.Runtime.state(app)
-    assert [output] = Cringe.Runtime.Backend.Test.frames(app)
+    assert :ok = Runtime.input(app, "\e[A")
+    assert %{count: 1} = Runtime.state(app)
+    assert [output] = Test.frames(app)
     assert output =~ "Count: 1"
   end
 
   test "handles Ghostty TTY key messages and repaints" do
-    assert {:ok, app} = Cringe.Test.start(Counter, backend: Cringe.Runtime.Backend.Test)
+    assert {:ok, app} = Driver.start(Counter, backend: Test)
 
     send(app, {Ghostty.TTY, self(), {:key, %Ghostty.KeyEvent{action: :press, key: :arrow_up}}})
 
-    assert eventually(fn -> Cringe.Runtime.state(app).count == 1 end)
-    assert [output] = Cringe.Runtime.Backend.Test.frames(app)
+    assert eventually(fn -> Runtime.state(app).count == 1 end)
+    assert [output] = Test.frames(app)
     assert output =~ "Count: 1"
   end
 
   test "handles Ghostty TTY resize messages" do
-    assert {:ok, app} = Cringe.Test.start(Counter, backend: Cringe.Runtime.Backend.Test)
+    assert {:ok, app} = Driver.start(Counter, backend: Test)
 
     send(app, {Ghostty.TTY, self(), {:resize, 12, 4}})
 
-    assert eventually(fn -> Cringe.Runtime.Backend.Test.frames(app) != [] end)
-    assert [%{width: 12, height: 4}] = [Cringe.Runtime.state(app) |> Map.get(:last_resize)]
+    assert eventually(fn -> Test.frames(app) != [] end)
+    assert [%{width: 12, height: 4}] = [Runtime.state(app) |> Map.get(:last_resize)]
   end
 
   defp eventually(fun, attempts \\ 20)

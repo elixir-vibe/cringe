@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Replace the `Cringe.Test` helper module with `Cringe.Assertions`, `Cringe.Case`, and `Cringe.Driver`.
+
 ## 0.2.0 (2026-05-26)
 
 Interactive alpha release.
