@@ -55,6 +55,15 @@ defmodule Cringe.Canvas do
     |> Enum.reduce(canvas, fn {line, row}, acc -> put(acc, x, row, line) end)
   end
 
+  @spec put_block(t(), non_neg_integer(), non_neg_integer(), [String.t()], keyword()) :: t()
+  def put_block(%__MODULE__{} = canvas, x, y, lines, opts)
+      when is_list(lines) and is_list(opts) do
+    case Keyword.get(opts, :clip) do
+      nil -> put_block(canvas, x, y, lines)
+      %Cringe.Rect{} = clip -> put_clipped_block(canvas, x, y, lines, clip)
+    end
+  end
+
   @spec lines(t()) :: [String.t()]
   def lines(%__MODULE__{lines: lines}), do: lines
 
@@ -66,6 +75,25 @@ defmodule Cringe.Canvas do
   defp replace_lines(lines, y, replacements) do
     {prefix, rest} = Enum.split(lines, y)
     prefix ++ replacements ++ Enum.drop(rest, length(replacements))
+  end
+
+  defp put_clipped_block(canvas, x, y, lines, clip) do
+    lines
+    |> Enum.with_index(y)
+    |> Enum.reduce(canvas, fn {line, row}, acc -> put_clipped_line(acc, x, row, line, clip) end)
+  end
+
+  defp put_clipped_line(canvas, x, y, line, clip) do
+    line_width = Measure.width(line)
+    left = max(x, clip.x)
+    right = min(x + line_width, clip.x + clip.width)
+
+    if y >= clip.y and y < clip.y + clip.height and right > left do
+      visible = line |> Measure.drop(left - x) |> Measure.take(right - left)
+      put(canvas, left, y, visible)
+    else
+      canvas
+    end
   end
 
   defp fit_line(text, width) do

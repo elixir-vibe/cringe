@@ -35,4 +35,9 @@ defmodule Cringe.MeasureTest do
     assert Measure.fit("ab🚀cd", 4) == "ab🚀"
     assert Measure.fit("ab🚀cd", 4, ellipsis?: true) == "ab…"
   end
+
+  test "drops text by terminal cells" do
+    assert Measure.drop("ab🚀cd", 4) == "cd"
+    assert Measure.drop("ab🚀cd", 3) == "cd"
+  end
 end

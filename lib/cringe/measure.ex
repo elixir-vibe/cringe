@@ -57,6 +57,13 @@ defmodule Cringe.Measure do
     end
   end
 
+  @spec drop(String.t(), non_neg_integer()) :: String.t()
+  def drop(text, count) when is_binary(text) and is_integer(count) and count >= 0 do
+    text
+    |> Cringe.ANSI.strip()
+    |> do_drop(count, 0, [])
+  end
+
   defp take_ansi(_text, width, visible, acc, active_sgr) when visible >= width do
     {acc, visible, active_sgr}
   end
@@ -98,6 +105,21 @@ defmodule Cringe.Measure do
 
   defp reset_if_styled([]), do: ""
   defp reset_if_styled(_active_sgr), do: "\e[0m"
+
+  defp do_drop(text, count, visible, acc) when visible >= count,
+    do: Enum.reverse(acc) |> Enum.join() |> Kernel.<>(text)
+
+  defp do_drop("", _count, _visible, acc), do: Enum.reverse(acc) |> Enum.join()
+
+  defp do_drop(text, count, visible, acc) do
+    case String.next_grapheme(text) do
+      {grapheme, rest} ->
+        do_drop(rest, count, visible + grapheme_width(grapheme), acc)
+
+      nil ->
+        Enum.reverse(acc) |> Enum.join()
+    end
+  end
 
   defp grapheme_width(grapheme) do
     grapheme

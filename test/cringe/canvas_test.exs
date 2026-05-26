@@ -2,6 +2,7 @@ defmodule Cringe.CanvasTest do
   use ExUnit.Case, async: true
 
   alias Cringe.Canvas
+  alias Cringe.Rect
 
   test "puts text on a fixed-size surface" do
     canvas =
@@ -56,6 +57,19 @@ defmodule Cringe.CanvasTest do
              "one   ",
              "two   ",
              "three "
+           ]
+  end
+
+  test "clips block writes to a rectangle" do
+    canvas =
+      Canvas.new(8, 4)
+      |> Canvas.put_block(1, 1, ["abcdef", "ghijkl", "mnopqr"], clip: Rect.new(3, 2, 3, 1))
+
+    assert Canvas.lines(canvas) == [
+             "        ",
+             "        ",
+             "   ijk  ",
+             "        "
            ]
   end
 end
