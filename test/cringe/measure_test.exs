@@ -28,6 +28,16 @@ defmodule Cringe.MeasureTest do
     assert Measure.take("\e[1mhi \e[32mok\e[0m", 4) == "\e[1mhi \e[32mo\e[0m"
   end
 
+  test "slices text by terminal cells" do
+    assert Measure.slice("abcdef", 1, 3) == "bcd"
+    assert Measure.slice("ab🚀cd", 2, 2) == "🚀"
+    assert Measure.slice("ab🚀cd", 3, 2) == "c"
+  end
+
+  test "preserves ANSI styles while slicing" do
+    assert Measure.slice("\e[31mhello\e[0m", 1, 2) == "\e[31mel\e[0m"
+  end
+
   test "pads by terminal cells" do
     assert Measure.pad("🚀", 4) == "🚀  "
   end
@@ -46,6 +56,19 @@ defmodule Cringe.MeasureTest do
     assert Measure.wrap("hello world", 5) == ["hello", "world"]
     assert Measure.wrap("a🚀b東c", 3) == ["a🚀", "b東", "c"]
     assert Measure.wrap("one\ntwo", 10) == ["one", "two"]
+  end
+
+  test "wraps empty lines explicitly" do
+    assert Measure.wrap("one\n\ntwo", 10) == ["one", "", "two"]
+  end
+
+  test "wrap normalizes leading and trailing whitespace at breaks" do
+    assert Measure.wrap("  hello world  ", 5) == ["hello", "world"]
+    assert Measure.wrap("hello   world", 8) == ["hello", "world"]
+  end
+
+  test "wrap strips ANSI styling before measuring" do
+    assert Measure.wrap("\e[31mhello world\e[0m", 5) == ["hello", "world"]
   end
 
   test "drops text by terminal cells" do

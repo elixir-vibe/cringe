@@ -4,6 +4,9 @@
 
 - Avoid linking public docs to the hidden terminal session implementation.
 - Add a form integration test for layout-derived focus navigation.
+- Let the runtime own terminal input session startup and shutdown.
+- Tighten terminal wrapping edge-case coverage.
+- Add ANSI-preserving `Cringe.Measure.slice/3` and use it for clipped canvas writes.
 
 ## 0.4.0 (2026-05-26)
 

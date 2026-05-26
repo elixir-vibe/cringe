@@ -21,18 +21,17 @@ defmodule Cringe.Runtime.Backend.Terminal do
   @impl true
   def init(opts) do
     device = Keyword.get(opts, :device, :stdio)
+    terminal_session = Keyword.get(opts, :terminal_session)
 
-    with {:ok, terminal_session} <- maybe_start_terminal_session(opts, device) do
-      state = %{
-        device: device,
-        terminal_session: terminal_session,
-        alternate_screen?: Keyword.get(opts, :alternate_screen, false),
-        hide_cursor?: Keyword.get(opts, :hide_cursor, true)
-      }
+    state = %{
+      device: device,
+      terminal_session: terminal_session,
+      alternate_screen?: Keyword.get(opts, :alternate_screen, false),
+      hide_cursor?: Keyword.get(opts, :hide_cursor, true)
+    }
 
-      write(state, startup_sequence(state))
-      {:ok, state}
-    end
+    write(state, startup_sequence(state))
+    {:ok, state}
   end
 
   @impl true
@@ -44,27 +43,13 @@ defmodule Cringe.Runtime.Backend.Terminal do
   @impl true
   def stop(state) do
     write(state, shutdown_sequence(state))
-    stop_terminal_session(state.terminal_session)
     :ok
-  end
-
-  defp maybe_start_terminal_session(opts, device) do
-    input? = Keyword.get(opts, :input, device == :stdio)
-
-    if input? do
-      TerminalSession.start_link(self(), opts)
-    else
-      {:ok, nil}
-    end
   end
 
   defp write(%{terminal_session: nil, device: device}, output), do: IO.write(device, output)
 
   defp write(%{terminal_session: terminal_session}, output),
     do: TerminalSession.write(terminal_session, output)
-
-  defp stop_terminal_session(nil), do: :ok
-  defp stop_terminal_session(terminal_session), do: GenServer.stop(terminal_session)
 
   defp startup_sequence(state) do
     [

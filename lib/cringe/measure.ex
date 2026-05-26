@@ -77,6 +77,30 @@ defmodule Cringe.Measure do
   end
 
   @doc """
+  Slices text by terminal-cell offset and width.
+
+  ANSI SGR sequences before the slice are tracked so active styling is preserved
+  for the returned text.
+
+      iex> Cringe.Measure.slice("abcdef", 1, 3)
+      "bcd"
+
+      iex> Cringe.Measure.slice("ab🚀cd", 2, 2)
+      "🚀"
+
+      iex> Cringe.Measure.slice("\e[31mhello\e[0m", 1, 2)
+      "\e[31mel\e[0m"
+
+  """
+  @spec slice(String.t(), non_neg_integer(), non_neg_integer()) :: String.t()
+  def slice(text, start, width)
+      when is_binary(text) and is_integer(start) and start >= 0 and is_integer(width) and
+             width >= 0 do
+    {result, active_sgr} = slice_ansi(text, start, width, 0, "", [], false)
+    result <> reset_if_styled(active_sgr)
+  end
+
+  @doc """
   Pads text with spaces until it reaches a terminal-cell width.
 
       iex> Cringe.Measure.pad("🚀", 4)
@@ -162,6 +186,7 @@ defmodule Cringe.Measure do
   @spec wrap(String.t(), pos_integer()) :: [String.t()]
   def wrap(text, width) when is_binary(text) and is_integer(width) and width > 0 do
     text
+    |> Cringe.ANSI.strip()
     |> String.split("\n")
     |> Enum.flat_map(&wrap_line(&1, width))
   end
@@ -183,6 +208,56 @@ defmodule Cringe.Measure do
     text
     |> Cringe.ANSI.strip()
     |> do_drop(count, 0, [])
+  end
+
+  defp slice_ansi(_text, _start, 0, _visible, acc, active_sgr, _started?),
+    do: {acc, active_sgr}
+
+  defp slice_ansi(_text, start, width, visible, acc, active_sgr, _started?)
+       when visible >= start + width,
+       do: {acc, active_sgr}
+
+  defp slice_ansi("", _start, _width, _visible, acc, active_sgr, _started?), do: {acc, active_sgr}
+
+  defp slice_ansi(<<"\e[", rest::binary>>, start, width, visible, acc, active_sgr, started?) do
+    {escape, rest} = take_escape(rest, "\e[")
+    next_active_sgr = update_sgr(active_sgr, escape)
+    next_acc = if started?, do: acc <> escape, else: acc
+    slice_ansi(rest, start, width, visible, next_acc, next_active_sgr, started?)
+  end
+
+  defp slice_ansi(text, start, width, visible, acc, active_sgr, started?) do
+    case String.next_grapheme(text) do
+      {grapheme, rest} ->
+        grapheme_width = grapheme_width(grapheme)
+        grapheme_start = visible
+        grapheme_end = visible + grapheme_width
+        slice_end = start + width
+
+        cond do
+          grapheme_end <= start ->
+            slice_ansi(rest, start, width, grapheme_end, acc, active_sgr, started?)
+
+          grapheme_start >= slice_end ->
+            {acc, active_sgr}
+
+          grapheme_start >= start and grapheme_end <= slice_end ->
+            {acc, started?} = start_slice(acc, active_sgr, started?)
+            slice_ansi(rest, start, width, grapheme_end, acc <> grapheme, active_sgr, started?)
+
+          true ->
+            slice_ansi(rest, start, width, grapheme_end, acc, active_sgr, started?)
+        end
+
+      nil ->
+        {acc, active_sgr}
+    end
+  end
+
+  defp start_slice(acc, _active_sgr, true), do: {acc, true}
+
+  defp start_slice(acc, active_sgr, false) do
+    {[acc, Enum.reverse(active_sgr)] |> IO.iodata_to_binary(), true}
   end
 
   defp wrap_line("", _width), do: [""]

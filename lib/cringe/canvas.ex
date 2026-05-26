@@ -96,8 +96,7 @@ defmodule Cringe.Canvas do
     end
   end
 
-  defp clipped_text(line, 0, width), do: Measure.take(line, width)
-  defp clipped_text(line, offset, width), do: line |> Measure.drop(offset) |> Measure.take(width)
+  defp clipped_text(line, offset, width), do: Measure.slice(line, offset, width)
 
   defp fit_line(text, width) do
     text

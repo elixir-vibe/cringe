@@ -6,7 +6,7 @@ defmodule Cringe.Runtime do
   use GenServer
 
   alias Cringe.Event
-  alias Cringe.Runtime.TickManager
+  alias Cringe.Runtime.{TerminalSession, TickManager}
   alias Cringe.Terminal.KeyDecoder
 
   @default_width 80
@@ -57,7 +57,9 @@ defmodule Cringe.Runtime do
     render_opts = default_render_opts(text_opts)
 
     with {:ok, app_state} <- app.init(app_opts),
-         {:ok, backend_state} <- init_backend(backend, backend_opts) do
+         {:ok, terminal_session} <- init_terminal_session(backend, backend_opts),
+         {:ok, backend_state} <-
+           init_backend(backend, backend_opts(backend_opts, terminal_session)) do
       {:ok,
        %{
          app: app,
@@ -67,7 +69,8 @@ defmodule Cringe.Runtime do
          backend: backend,
          backend_state: backend_state,
          painter: new_painter(render_opts),
-         tick_manager: start_tick_manager(ticks)
+         tick_manager: start_tick_manager(ticks),
+         terminal_session: terminal_session
        }}
     else
       {:stop, reason} -> {:stop, reason}
@@ -134,10 +137,12 @@ defmodule Cringe.Runtime do
   def handle_info(_message, state), do: {:noreply, state}
 
   @impl GenServer
-  def terminate(_reason, %{backend: nil}), do: :ok
+  def terminate(_reason, %{backend: nil} = state), do: stop_terminal_session(state)
 
-  def terminate(_reason, %{backend: backend, backend_state: backend_state}),
-    do: backend.stop(backend_state)
+  def terminate(_reason, %{backend: backend, backend_state: backend_state} = state) do
+    backend.stop(backend_state)
+    stop_terminal_session(state)
+  end
 
   defp normalize_backend({backend, opts}) when is_atom(backend) and is_list(opts),
     do: {backend, opts}
@@ -146,6 +151,31 @@ defmodule Cringe.Runtime do
 
   defp init_backend(nil, _opts), do: {:ok, nil}
   defp init_backend(backend, opts), do: backend.init(opts)
+
+  defp init_terminal_session(Cringe.Runtime.Backend.Terminal, opts) do
+    device = Keyword.get(opts, :device, :stdio)
+    input? = Keyword.get(opts, :input, device == :stdio)
+
+    if input? do
+      TerminalSession.start_link(self(), opts)
+    else
+      {:ok, nil}
+    end
+  end
+
+  defp init_terminal_session(_backend, _opts), do: {:ok, nil}
+
+  defp backend_opts(opts, nil), do: opts
+
+  defp backend_opts(opts, terminal_session),
+    do: Keyword.put(opts, :terminal_session, terminal_session)
+
+  defp stop_terminal_session(%{terminal_session: nil}), do: :ok
+
+  defp stop_terminal_session(%{terminal_session: terminal_session}) do
+    if Process.alive?(terminal_session), do: GenServer.stop(terminal_session)
+    :ok
+  end
 
   defp start_tick_manager([]), do: nil
 
