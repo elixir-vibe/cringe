@@ -287,6 +287,25 @@ Cringe.Focus.focused?(focus, :email)
 
 The form example shows this with inputs and selects.
 
+## Overlays
+
+`Cringe.Overlay` composes documents without imposing runtime policy:
+
+```elixir
+overlays =
+  Cringe.Overlay.new([
+    Cringe.Overlay.layer(:dialog, dialog(title: "Continue?", actions: [%{id: :ok, label: "OK"}]),
+      anchor: :center,
+      capture?: true
+    )
+  ])
+
+Cringe.Overlay.render(text("base"), overlays, width: 80, height: 24)
+```
+
+Layers are ordered bottom-to-top. Use `Cringe.Overlay.State.capturing/1` if an
+app wants to route input to the topmost capturing layer.
+
 ## Architecture
 
 Cringe keeps each terminal UI stage explicit:

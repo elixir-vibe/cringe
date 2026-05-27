@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add pure document-level overlay composition with positioned layers.
 - Document shared widget state, render, keymap, and update-result conventions.
 - Add a generic `Cringe.Widgets.Tabs` with struct-backed tabs and selection state.
 - Render width- and height-limited editors around the current cursor position.
