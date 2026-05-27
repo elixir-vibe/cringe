@@ -194,7 +194,8 @@ defmodule Cringe.Measure do
   @doc """
   Drops text until at least `count` terminal cells are removed.
 
-  ANSI styling is stripped from the result.
+  ANSI styling is stripped from the result. For ANSI-preserving clipping, prefer
+  `slice/3`.
 
       iex> Cringe.Measure.drop("ab🚀cd", 4)
       "cd"
