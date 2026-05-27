@@ -157,6 +157,23 @@ keymap = Cringe.Keymap.new(next: [:tab], cancel: [:escape, {:c, [:ctrl]}])
 Cringe.Keymap.match?(keymap, :cancel, Cringe.Event.key(:c, mods: [:ctrl]))
 ```
 
+`Cringe.Widgets.Menu` renders generic action menus with sections, separators,
+shortcuts, descriptions, and disabled items:
+
+```elixir
+alias Cringe.Widgets.Menu.State
+
+state =
+  State.new([
+    {:section, "File"},
+    %{id: :open, label: "Open", shortcut: "Enter", description: "Open item"},
+    :separator,
+    %{id: :delete, label: "Delete", disabled?: true}
+  ])
+
+menu(state: state, width: 64)
+```
+
 `Cringe.Widgets.Dialog` provides generic title/body/action rendering and action
 selection:
 
@@ -374,6 +391,7 @@ mix run examples/interactive_counter.exs
 mix run examples/interactive_input.exs
 mix run examples/form.exs
 mix run examples/layout_focus_form.exs
+mix run examples/menu.exs
 mix run examples/select_list.exs
 mix run examples/table.exs
 mix run examples/tabs.exs

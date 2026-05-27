@@ -13,6 +13,7 @@ defmodule Cringe do
     Editor,
     Form,
     Input,
+    Menu,
     Progress,
     Select,
     SelectList,
@@ -70,6 +71,12 @@ defmodule Cringe do
   """
   @spec form(keyword()) :: Cringe.Document.t()
   def form(opts \\ []), do: Form.new(opts)
+
+  @doc """
+  Builds a generic menu widget.
+  """
+  @spec menu(keyword()) :: Cringe.Document.t()
+  def menu(opts \\ []), do: Menu.new(opts)
 
   @doc """
   Builds a generic dialog widget.
