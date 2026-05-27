@@ -7,7 +7,19 @@ defmodule Cringe do
   """
 
   alias Cringe.Document.Text
-  alias Cringe.Widgets.{Input, Progress, Select, Spinner}
+
+  alias Cringe.Widgets.{
+    Dialog,
+    Editor,
+    Form,
+    Input,
+    Progress,
+    Select,
+    SelectList,
+    Spinner,
+    Table,
+    Tabs
+  }
 
   @doc """
   Builds a text node.
@@ -48,10 +60,46 @@ defmodule Cringe do
   def input(opts \\ []), do: Input.new(opts)
 
   @doc """
+  Builds a render-only multiline editor widget.
+  """
+  @spec editor(keyword()) :: Cringe.Document.t()
+  def editor(opts \\ []), do: Editor.new(opts)
+
+  @doc """
+  Builds a generic form container.
+  """
+  @spec form(keyword()) :: Cringe.Document.t()
+  def form(opts \\ []), do: Form.new(opts)
+
+  @doc """
+  Builds a generic dialog widget.
+  """
+  @spec dialog(keyword()) :: Cringe.Document.t()
+  def dialog(opts \\ []), do: Dialog.new(opts)
+
+  @doc """
+  Builds a generic table widget.
+  """
+  @spec table(keyword()) :: Cringe.Document.t()
+  def table(opts \\ []), do: Table.new(opts)
+
+  @doc """
+  Builds a generic tabs widget.
+  """
+  @spec tabs(keyword()) :: Cringe.Document.t()
+  def tabs(opts \\ []), do: Tabs.new(opts)
+
+  @doc """
   Builds a render-only select/list widget.
   """
   @spec select(keyword()) :: Cringe.Document.t()
   def select(opts \\ []), do: Select.new(opts)
+
+  @doc """
+  Builds a scrollable select-list widget with optional descriptions.
+  """
+  @spec select_list(keyword()) :: Cringe.Document.t()
+  def select_list(opts \\ []), do: SelectList.new(opts)
 
   @doc """
   Renders a terminal document to a string.

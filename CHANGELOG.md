@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Document shared widget state, render, keymap, and update-result conventions.
+- Add a generic `Cringe.Widgets.Tabs` with struct-backed tabs and selection state.
+- Render width- and height-limited editors around the current cursor position.
+- Add a generic `Cringe.Widgets.Table` with struct-backed columns, rows, and selection state.
+- Add a generic `Cringe.Widgets.Dialog` with struct-backed actions and selection state.
+- Add a generic `Cringe.Widgets.Form` container with struct-backed fields and focus state.
+- Add a render-only multiline `Cringe.Widgets.Editor` with explicit editing state.
+- Add `Cringe.Keymap` with struct-backed bindings for semantic widget shortcuts.
+- Add a scrollable `Cringe.Widgets.SelectList` with struct-backed items and state.
 - Document layout query and focus helpers as public API.
 - Add explicit text lines to layout nodes.
 - Add a layout-derived focus form example.
@@ -19,7 +28,7 @@
 
 ## 0.4.0 (2026-05-26)
 
-- Move terminal input ownership into `Cringe.Runtime.TerminalSession`.
+- Move terminal input ownership into an internal terminal session.
 - Add public terminal-cell chunking and wrapping helpers.
 
 ## 0.3.1 (2026-05-26)

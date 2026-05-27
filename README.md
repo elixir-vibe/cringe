@@ -85,6 +85,17 @@ end
 
 Widgets are render-only by default. You keep state in your app and pass it in explicitly.
 
+Stateful widgets follow the same contract:
+
+- state lives in a struct-backed `State` module
+- `new/1` builds a document from options
+- `render/2` is a state-first wrapper around `new/1`
+- `update/2` uses default keybindings
+- `update/3` accepts a custom `Cringe.Keymap` where supported
+- update results are `{:ok, state}`, `{:select, item, state}`, `{:cancel, state}`, or `:ignored`
+
+Apps decide what selection, cancellation, submission, validation, history, and autocomplete mean.
+
 ```elixir
 column gap: 1 do
   spinner(frame: 2, label: "Loading")
@@ -92,6 +103,22 @@ column gap: 1 do
   input(value: "cringe", focused: true, width: 24)
   select(options: ["Dashboard", "Logs", "Settings"], selected: 1, focused: true)
 end
+```
+
+For richer pickers, use `Cringe.Widgets.SelectList` with explicit item and state structs:
+
+```elixir
+alias Cringe.Widgets.SelectList
+alias Cringe.Widgets.SelectList.State
+
+state =
+  State.new([
+    %{id: :dashboard, label: "Dashboard", description: "Overview and live status"},
+    %{id: :settings, label: "Settings", description: "Profiles and keybindings"}
+  ])
+
+{:ok, state} = SelectList.update(state, Cringe.Event.key(:down))
+select_list(state: state, width: 72)
 ```
 
 Cursor-aware input state is available when you need editing behavior:
@@ -104,12 +131,85 @@ state = State.new("hello", cursor: 5)
 {:ok, state} = Input.update(state, Cringe.Event.text("!"))
 ```
 
+For multiline text, `Cringe.Widgets.Editor` keeps cursor position in a state struct:
+
+```elixir
+alias Cringe.Widgets.Editor
+alias Cringe.Widgets.Editor.State
+
+state = State.new("one\ntwo", cursor_line: 1, cursor_col: 3)
+{:ok, state} = Editor.update(state, Cringe.Event.key(:enter))
+editor(state: state, focused: true, height: 4)
+```
+
 Selects expose the same explicit update style:
 
 ```elixir
 alias Cringe.Widgets.Select
 
 {:ok, selected} = Select.update(0, Cringe.Event.key(:down), ["one", "two"])
+```
+
+Widgets can use keymaps to keep shortcuts semantic and configurable:
+
+```elixir
+keymap = Cringe.Keymap.new(next: [:tab], cancel: [:escape, {:c, [:ctrl]}])
+Cringe.Keymap.match?(keymap, :cancel, Cringe.Event.key(:c, mods: [:ctrl]))
+```
+
+`Cringe.Widgets.Dialog` provides generic title/body/action rendering and action
+selection:
+
+```elixir
+alias Cringe.Widgets.Dialog
+alias Cringe.Widgets.Dialog.State
+
+state = State.new([%{id: :cancel, label: "Cancel"}, %{id: :ok, label: "OK"}])
+{:ok, state} = Dialog.update(state, Cringe.Event.key(:right))
+dialog(title: "Continue?", body: "Run the operation.", state: state)
+```
+
+`Cringe.Widgets.Tabs` renders a selected panel from struct-backed tab state:
+
+```elixir
+alias Cringe.Widgets.Tabs.State
+
+state =
+  State.new([
+    %{id: :overview, label: "Overview", content: "System is running"},
+    %{id: :logs, label: "Logs", content: "No errors"}
+  ])
+
+tabs(state: state)
+```
+
+`Cringe.Widgets.Table` renders fixed columns with optional row selection:
+
+```elixir
+alias Cringe.Widgets.Table.State
+
+columns = [%{id: :name, label: "Name", width: 12}, %{id: :count, label: "Count", align: :right}]
+state = State.new([%{name: "Jobs", count: 37}], selected: 0)
+table(columns: columns, state: state)
+```
+
+`Cringe.Widgets.Form` is a generic focused field container. It owns focus and
+delegates input to field widgets without imposing submission or validation rules:
+
+```elixir
+alias Cringe.Widgets.Form
+alias Cringe.Widgets.Form.Field
+alias Cringe.Widgets.Form.State
+
+state =
+  State.new([
+    Field.input(:name, width: 28),
+    Field.editor(:notes, width: 28, height: 2),
+    Field.select(:role, ["Admin", "Editor", "Viewer"])
+  ])
+
+{:ok, state} = Form.update(state, Cringe.Event.key(:tab))
+form(state: state)
 ```
 
 ## Interactive apps
@@ -248,10 +348,16 @@ mix run examples/layout.exs
 mix run examples/dsl.exs
 mix run examples/widgets.exs
 mix run examples/counter.exs
+mix run examples/dialog.exs
+mix run examples/editor.exs
+mix run examples/generic_form.exs
 mix run examples/interactive_counter.exs
 mix run examples/interactive_input.exs
 mix run examples/form.exs
 mix run examples/layout_focus_form.exs
+mix run examples/select_list.exs
+mix run examples/table.exs
+mix run examples/tabs.exs
 mix run examples/ticking_spinner.exs
 ```
 
