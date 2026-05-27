@@ -251,6 +251,7 @@ mix run examples/counter.exs
 mix run examples/interactive_counter.exs
 mix run examples/interactive_input.exs
 mix run examples/form.exs
+mix run examples/layout_focus_form.exs
 mix run examples/ticking_spinner.exs
 ```
 

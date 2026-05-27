@@ -34,12 +34,12 @@ defmodule Cringe.Renderer.Draw do
 
   defp draw_at(
          %Context{} = context,
-         %Node{document: %Text{content: content, opts: text_opts}} = node,
+         %Node{document: %Text{opts: text_opts}} = node,
          {x, y}
        ) do
     lines =
-      content
-      |> String.split("\n", trim: false)
+      node
+      |> text_lines()
       |> Layout.resize_block(text_draw_opts(text_opts, node))
       |> Enum.map(&ANSI.apply(&1, text_opts, context.ansi?))
 
@@ -77,6 +77,12 @@ defmodule Cringe.Renderer.Draw do
     Enum.reduce(node.children, context, fn child, acc ->
       draw_at(acc, child, {x + child.rect.x, y + child.rect.y})
     end)
+  end
+
+  defp text_lines(%Node{text_lines: lines}) when is_list(lines), do: lines
+
+  defp text_lines(%Node{document: %Text{content: content}}) do
+    String.split(content, "\n", trim: false)
   end
 
   defp text_draw_opts(text_opts, node) do

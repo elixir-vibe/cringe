@@ -1,9 +1,18 @@
 defmodule Cringe.Layout do
-  @moduledoc false
+  @moduledoc """
+  Layout query and sizing helpers.
+
+  `Cringe.Layout.Engine.layout/2` turns a document into a positioned tree of
+  `Cringe.Layout.Node` structs. This module provides small helpers for querying
+  that tree by document IDs, coordinates, and focus metadata.
+  """
 
   alias Cringe.Layout.Node
   alias Cringe.Measure
 
+  @doc """
+  Returns the maximum terminal-cell width of a block of lines.
+  """
   @spec block_width([String.t()]) :: non_neg_integer()
   def block_width(lines) do
     lines
@@ -11,10 +20,16 @@ defmodule Cringe.Layout do
     |> Enum.max(fn -> 0 end)
   end
 
+  @doc """
+  Finds the first layout node with the given document ID.
+  """
   @spec find(Node.t(), term()) :: Node.t() | nil
   def find(%Node{id: id} = node, id), do: node
   def find(%Node{children: children}, id), do: Enum.find_value(children, &find(&1, id))
 
+  @doc """
+  Finds the deepest node containing zero-based coordinates relative to `node`.
+  """
   @spec at(Node.t(), non_neg_integer(), non_neg_integer()) :: Node.t() | nil
   def at(%Node{} = node, x, y) when is_integer(x) and is_integer(y) do
     if contains?(node.rect, x, y) do
@@ -22,6 +37,9 @@ defmodule Cringe.Layout do
     end
   end
 
+  @doc """
+  Returns the path from `node` to the deepest node containing coordinates.
+  """
   @spec path_at(Node.t(), non_neg_integer(), non_neg_integer()) :: [Node.t()]
   def path_at(%Node{} = node, x, y) when is_integer(x) and is_integer(y) do
     if contains?(node.rect, x, y) do
@@ -32,6 +50,9 @@ defmodule Cringe.Layout do
     end
   end
 
+  @doc """
+  Lists focusable nodes in layout order.
+  """
   @spec focusable(Node.t()) :: [Node.t()]
   def focusable(%Node{} = node) do
     descendants = Enum.flat_map(node.children, &focusable/1)
@@ -43,16 +64,25 @@ defmodule Cringe.Layout do
     end
   end
 
+  @doc """
+  Returns the next focusable node after `current_id`, wrapping at the end.
+  """
   @spec next_focus(Node.t(), term() | nil) :: Node.t() | nil
   def next_focus(%Node{} = node, current_id \\ nil) do
     move_focus(node, current_id, 1)
   end
 
+  @doc """
+  Returns the previous focusable node before `current_id`, wrapping at the start.
+  """
   @spec previous_focus(Node.t(), term() | nil) :: Node.t() | nil
   def previous_focus(%Node{} = node, current_id \\ nil) do
     move_focus(node, current_id, -1)
   end
 
+  @doc """
+  Returns the next or previous focusable node ID.
+  """
   @spec focus_id(Node.t(), :next | :previous, term() | nil) :: term() | nil
   def focus_id(node, direction, current_id \\ nil)
 
@@ -61,6 +91,7 @@ defmodule Cringe.Layout do
   def focus_id(%Node{} = node, :previous, current_id),
     do: node |> previous_focus(current_id) |> node_id()
 
+  @doc false
   @spec resize_block([String.t()], keyword()) :: [String.t()]
   def resize_block(lines, opts) do
     width = constrained_width(lines, opts)
@@ -72,11 +103,13 @@ defmodule Cringe.Layout do
     |> maybe_resize_height(height)
   end
 
+  @doc false
   @spec resize_width([String.t()], non_neg_integer(), atom()) :: [String.t()]
   def resize_width(lines, width, align \\ :left) when is_integer(width) and width >= 0 do
     Enum.map(lines, &resize_line(&1, width, align))
   end
 
+  @doc false
   @spec resize_line(String.t(), non_neg_integer(), atom()) :: String.t()
   def resize_line(line, width, align \\ :left)
       when is_binary(line) and is_integer(width) and width >= 0 do

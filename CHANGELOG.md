@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Document layout query and focus helpers as public API.
+- Add explicit text lines to layout nodes.
+- Add a layout-derived focus form example.
+
 ## 0.5.0 (2026-05-26)
 
 - Avoid linking public docs to the hidden terminal session implementation.

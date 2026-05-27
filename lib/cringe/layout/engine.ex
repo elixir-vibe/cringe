@@ -24,7 +24,7 @@ defmodule Cringe.Layout.Engine do
       |> String.split("\n", trim: false)
       |> Layout.resize_block(opts)
 
-    Node.new(document, lines, cursor: Keyword.get(opts, :cursor))
+    Node.new(document, lines, cursor: Keyword.get(opts, :cursor), text_lines: lines)
   end
 
   defp layout_node(%Stack{direction: :vertical, children: children, opts: opts} = document) do
@@ -87,7 +87,7 @@ defmodule Cringe.Layout.Engine do
       |> Enum.map(&maybe_clip_width(&1, constraint.width))
 
     size = Size.new(block_width(lines), length(lines))
-    Node.new(node.document, lines, cursor: clip_cursor(node.cursor, size))
+    Node.new(node.document, lines, cursor: clip_cursor(node.cursor, size), text_lines: lines)
   end
 
   defp apply_root_constraint(node, %Constraint{} = constraint) do

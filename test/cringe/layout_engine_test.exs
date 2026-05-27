@@ -31,6 +31,7 @@ defmodule Cringe.Layout.EngineTest do
     node = Engine.layout(text("hello\nworld"), width: 3, height: 1)
 
     assert node.lines == ["hel"]
+    assert node.text_lines == ["hel"]
     assert node.rect.width == 3
     assert node.rect.height == 1
   end
@@ -44,6 +45,7 @@ defmodule Cringe.Layout.EngineTest do
       |> Engine.layout()
 
     assert node.lines == ["   ", "   ", "   "]
+    assert node.text_lines == nil
     assert node.rect.width == 3
     assert node.rect.height == 3
   end
