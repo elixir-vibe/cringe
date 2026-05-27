@@ -162,4 +162,16 @@ defmodule Cringe.RuntimeTest do
     assert :ok = Driver.key(app, :up)
     assert Runtime.state(app).count == 1
   end
+
+  test "runtime supervisor owns runtime child processes" do
+    assert {:ok, supervisor} =
+             Cringe.run_supervised(Counter, backend: Test, ticks: [spinner: 1_000])
+
+    assert child_supervisor = Cringe.Runtime.Supervisor.child_supervisor(supervisor)
+
+    assert [{_, tick_manager, :worker, [Cringe.Runtime.TickManager]}] =
+             DynamicSupervisor.which_children(child_supervisor)
+
+    assert is_pid(tick_manager)
+  end
 end

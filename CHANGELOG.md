@@ -6,6 +6,7 @@
 - Add explicit text lines to layout nodes.
 - Add a layout-derived focus form example.
 - Clarify that `Cringe.Measure.drop/2` strips ANSI and `slice/3` preserves it.
+- Move runtime infrastructure under the runtime child supervisor.
 
 ## 0.5.0 (2026-05-26)
 

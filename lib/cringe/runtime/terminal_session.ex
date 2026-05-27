@@ -9,9 +9,16 @@ defmodule Cringe.Runtime.TerminalSession do
           | {:raw, boolean()}
           | {:takeover, boolean()}
 
+  @spec start_link(keyword()) :: GenServer.on_start()
+  def start_link(opts) when is_list(opts) do
+    owner = Keyword.fetch!(opts, :owner)
+    terminal_opts = Keyword.get(opts, :terminal_opts, [])
+    GenServer.start_link(__MODULE__, {owner, terminal_opts})
+  end
+
   @spec start_link(pid(), [start_opt()]) :: GenServer.on_start()
   def start_link(owner, opts) when is_pid(owner) and is_list(opts) do
-    GenServer.start_link(__MODULE__, {owner, opts})
+    start_link(owner: owner, terminal_opts: opts)
   end
 
   @spec write(GenServer.server(), IO.chardata()) :: :ok

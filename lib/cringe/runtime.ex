@@ -17,6 +17,7 @@ defmodule Cringe.Runtime do
           | {:opts, keyword()}
           | {:name, GenServer.name()}
           | {:backend, module() | {module(), keyword()}}
+          | {:child_supervisor, Supervisor.supervisor()}
           | {:ticks, keyword(pos_integer())}
           | Cringe.Renderer.render_opts()
 
@@ -52,12 +53,13 @@ defmodule Cringe.Runtime do
     app = Keyword.fetch!(opts, :app)
     app_opts = Keyword.get(opts, :opts, [])
     {backend, backend_opts} = opts |> Keyword.get(:backend, {nil, []}) |> normalize_backend()
+    child_supervisor = Keyword.get(opts, :child_supervisor)
     ticks = Keyword.get(opts, :ticks, [])
-    text_opts = Keyword.drop(opts, [:app, :opts, :backend, :ticks])
+    text_opts = Keyword.drop(opts, [:app, :opts, :backend, :child_supervisor, :ticks])
     render_opts = default_render_opts(text_opts)
 
     with {:ok, app_state} <- app.init(app_opts),
-         {:ok, terminal_session} <- init_terminal_session(backend, backend_opts),
+         {:ok, terminal_session} <- init_terminal_session(backend, backend_opts, child_supervisor),
          {:ok, backend_state} <-
            init_backend(backend, backend_opts(backend_opts, terminal_session)) do
       {:ok,
@@ -69,7 +71,8 @@ defmodule Cringe.Runtime do
          backend: backend,
          backend_state: backend_state,
          painter: new_painter(render_opts),
-         tick_manager: start_tick_manager(ticks),
+         child_supervisor: child_supervisor,
+         tick_manager: start_tick_manager(ticks, child_supervisor),
          terminal_session: terminal_session
        }}
     else
@@ -152,18 +155,18 @@ defmodule Cringe.Runtime do
   defp init_backend(nil, _opts), do: {:ok, nil}
   defp init_backend(backend, opts), do: backend.init(opts)
 
-  defp init_terminal_session(Cringe.Runtime.Backend.Terminal, opts) do
+  defp init_terminal_session(Cringe.Runtime.Backend.Terminal, opts, child_supervisor) do
     device = Keyword.get(opts, :device, :stdio)
     input? = Keyword.get(opts, :input, device == :stdio)
 
     if input? do
-      TerminalSession.start_link(self(), opts)
+      start_runtime_child(child_supervisor, {TerminalSession, owner: self(), terminal_opts: opts})
     else
       {:ok, nil}
     end
   end
 
-  defp init_terminal_session(_backend, _opts), do: {:ok, nil}
+  defp init_terminal_session(_backend, _opts, _child_supervisor), do: {:ok, nil}
 
   defp backend_opts(opts, nil), do: opts
 
@@ -172,16 +175,28 @@ defmodule Cringe.Runtime do
 
   defp stop_terminal_session(%{terminal_session: nil}), do: :ok
 
+  defp stop_terminal_session(%{child_supervisor: child_supervisor})
+       when not is_nil(child_supervisor), do: :ok
+
   defp stop_terminal_session(%{terminal_session: terminal_session}) do
     if Process.alive?(terminal_session), do: GenServer.stop(terminal_session)
     :ok
   end
 
-  defp start_tick_manager([]), do: nil
+  defp start_tick_manager([], _child_supervisor), do: nil
 
-  defp start_tick_manager(ticks) do
-    {:ok, manager} = TickManager.start_link(self(), ticks)
+  defp start_tick_manager(ticks, child_supervisor) do
+    {:ok, manager} =
+      start_runtime_child(child_supervisor, {TickManager, target: self(), ticks: ticks})
+
     manager
+  end
+
+  defp start_runtime_child(nil, {TickManager, opts}), do: TickManager.start_link(opts)
+  defp start_runtime_child(nil, {TerminalSession, opts}), do: TerminalSession.start_link(opts)
+
+  defp start_runtime_child(child_supervisor, child_spec) do
+    DynamicSupervisor.start_child(child_supervisor, child_spec)
   end
 
   defp dispatch_event(%{app: app, app_state: app_state} = state, event) do

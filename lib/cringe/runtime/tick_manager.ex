@@ -5,9 +5,16 @@ defmodule Cringe.Runtime.TickManager do
 
   @type interval :: pos_integer()
 
+  @spec start_link(keyword()) :: GenServer.on_start()
+  def start_link(opts) when is_list(opts) do
+    target = Keyword.fetch!(opts, :target)
+    ticks = Keyword.fetch!(opts, :ticks)
+    GenServer.start_link(__MODULE__, {target, ticks})
+  end
+
   @spec start_link(pid(), keyword(interval())) :: GenServer.on_start()
   def start_link(target, ticks) when is_pid(target) and is_list(ticks) do
-    GenServer.start_link(__MODULE__, {target, ticks})
+    start_link(target: target, ticks: ticks)
   end
 
   @impl GenServer

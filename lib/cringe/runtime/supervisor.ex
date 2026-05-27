@@ -1,6 +1,6 @@
 defmodule Cringe.Runtime.Supervisor do
   @moduledoc """
-  Supervisor for a Cringe runtime process.
+  Supervisor for a Cringe runtime process and its runtime-owned children.
   """
 
   use Supervisor
@@ -20,8 +20,30 @@ defmodule Cringe.Runtime.Supervisor do
     end)
   end
 
+  @spec child_supervisor(Supervisor.supervisor()) :: pid() | nil
+  def child_supervisor(supervisor) do
+    supervisor
+    |> Supervisor.which_children()
+    |> Enum.find_value(fn
+      {{Cringe.Runtime.Supervisor.Children, _ref}, pid, :supervisor, [DynamicSupervisor]}
+      when is_pid(pid) ->
+        pid
+
+      _child ->
+        nil
+    end)
+  end
+
   @impl Supervisor
   def init(opts) do
-    Supervisor.init([{Cringe.Runtime, opts}], strategy: :one_for_one)
+    child_supervisor_name = {:global, {__MODULE__.Children, make_ref()}}
+
+    children = [
+      {DynamicSupervisor,
+       id: Cringe.Runtime.Children, strategy: :one_for_one, name: child_supervisor_name},
+      {Cringe.Runtime, Keyword.put(opts, :child_supervisor, child_supervisor_name)}
+    ]
+
+    Supervisor.init(children, strategy: :one_for_all)
   end
 end
