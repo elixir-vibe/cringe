@@ -14,6 +14,7 @@ defmodule Cringe.Runtime.Backend.Terminal do
   @type state :: %{
           device: IO.device(),
           terminal_session: GenServer.server() | nil,
+          terminal_session_module: module(),
           alternate_screen?: boolean(),
           hide_cursor?: boolean()
         }
@@ -26,6 +27,7 @@ defmodule Cringe.Runtime.Backend.Terminal do
     state = %{
       device: device,
       terminal_session: terminal_session,
+      terminal_session_module: Keyword.get(opts, :terminal_session_module, TerminalSession),
       alternate_screen?: Keyword.get(opts, :alternate_screen, false),
       hide_cursor?: Keyword.get(opts, :hide_cursor, true)
     }
@@ -48,8 +50,8 @@ defmodule Cringe.Runtime.Backend.Terminal do
 
   defp write(%{terminal_session: nil, device: device}, output), do: IO.write(device, output)
 
-  defp write(%{terminal_session: terminal_session}, output),
-    do: TerminalSession.write(terminal_session, output)
+  defp write(%{terminal_session: terminal_session, terminal_session_module: module}, output),
+    do: module.write(terminal_session, output)
 
   defp startup_sequence(state) do
     [

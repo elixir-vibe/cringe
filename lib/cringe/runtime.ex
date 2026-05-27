@@ -158,9 +158,10 @@ defmodule Cringe.Runtime do
   defp init_terminal_session(Cringe.Runtime.Backend.Terminal, opts, child_supervisor) do
     device = Keyword.get(opts, :device, :stdio)
     input? = Keyword.get(opts, :input, device == :stdio)
+    session_module = Keyword.get(opts, :terminal_session_module, TerminalSession)
 
     if input? do
-      start_runtime_child(child_supervisor, {TerminalSession, owner: self(), terminal_opts: opts})
+      start_runtime_child(child_supervisor, {session_module, owner: self(), terminal_opts: opts})
     else
       {:ok, nil}
     end
@@ -170,8 +171,11 @@ defmodule Cringe.Runtime do
 
   defp backend_opts(opts, nil), do: opts
 
-  defp backend_opts(opts, terminal_session),
-    do: Keyword.put(opts, :terminal_session, terminal_session)
+  defp backend_opts(opts, terminal_session) do
+    opts
+    |> Keyword.put(:terminal_session, terminal_session)
+    |> Keyword.put_new(:terminal_session_module, TerminalSession)
+  end
 
   defp stop_terminal_session(%{terminal_session: nil}), do: :ok
 
@@ -192,8 +196,7 @@ defmodule Cringe.Runtime do
     manager
   end
 
-  defp start_runtime_child(nil, {TickManager, opts}), do: TickManager.start_link(opts)
-  defp start_runtime_child(nil, {TerminalSession, opts}), do: TerminalSession.start_link(opts)
+  defp start_runtime_child(nil, {module, opts}), do: module.start_link(opts)
 
   defp start_runtime_child(child_supervisor, child_spec) do
     DynamicSupervisor.start_child(child_supervisor, child_spec)

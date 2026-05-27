@@ -27,6 +27,21 @@ defmodule Cringe.RuntimeTest do
     def render(state), do: box(text("Count: #{state.count}"), padding: 1)
   end
 
+  defmodule FakeTerminalSession do
+    use GenServer
+
+    def start_link(opts), do: GenServer.start_link(__MODULE__, opts)
+    def write(session, output), do: GenServer.call(session, {:write, output})
+
+    @impl true
+    def init(opts), do: {:ok, %{owner: Keyword.fetch!(opts, :owner), writes: []}}
+
+    @impl true
+    def handle_call({:write, output}, _from, state) do
+      {:reply, :ok, %{state | writes: [Elixir.IO.iodata_to_binary(output) | state.writes]}}
+    end
+  end
+
   test "runs app lifecycle and dispatches events" do
     assert {:ok, app} = Driver.start(Counter)
 
@@ -173,5 +188,20 @@ defmodule Cringe.RuntimeTest do
              DynamicSupervisor.which_children(child_supervisor)
 
     assert is_pid(tick_manager)
+  end
+
+  test "runtime supervisor owns terminal session child process" do
+    assert {:ok, supervisor} =
+             Cringe.run_supervised(Counter,
+               backend: {Terminal, input: true, terminal_session_module: FakeTerminalSession}
+             )
+
+    assert child_supervisor = Cringe.Runtime.Supervisor.child_supervisor(supervisor)
+
+    assert [{_, terminal_session, :worker, [FakeTerminalSession]}] =
+             DynamicSupervisor.which_children(child_supervisor)
+
+    assert %{terminal_session: ^terminal_session} =
+             supervisor |> Cringe.Runtime.Supervisor.runtime() |> Runtime.backend_state()
   end
 end
