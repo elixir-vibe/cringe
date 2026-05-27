@@ -53,6 +53,7 @@ defmodule Cringe.LayoutRegionsTest do
       end
       |> Engine.layout()
 
+    assert [:name, :role] = Layout.focus_ids(node)
     assert [:name, :role] = node |> Layout.focusable() |> Enum.map(& &1.id)
     assert Layout.find(node, :name).role == :input
     assert Layout.find(node, :role).role == :select

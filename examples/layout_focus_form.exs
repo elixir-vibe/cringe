@@ -48,7 +48,7 @@ defmodule LayoutFocusForm do
 
   defp move_focus(state, direction) do
     layout = Engine.layout(document(state))
-    ids = layout |> Layout.focusable() |> Enum.map(& &1.id)
+    ids = Layout.focus_ids(layout)
     current = Layout.focus_id(layout, direction, Focus.current(state.focus))
 
     %{state | focus: Focus.new(ids, current: current)}

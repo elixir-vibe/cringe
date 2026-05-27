@@ -65,6 +65,12 @@ defmodule Cringe.Layout do
   end
 
   @doc """
+  Lists focusable node IDs in layout order.
+  """
+  @spec focus_ids(Node.t()) :: [term()]
+  def focus_ids(%Node{} = node), do: node |> focusable() |> Enum.map(& &1.id)
+
+  @doc """
   Returns the next focusable node after `current_id`, wrapping at the end.
   """
   @spec next_focus(Node.t(), term() | nil) :: Node.t() | nil

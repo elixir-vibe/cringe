@@ -53,6 +53,11 @@ defmodule Cringe.Driver do
     await(fn -> Enum.any?(frames(app), fun) end, opts)
   end
 
+  @spec await_text(GenServer.server(), (String.t() -> as_boolean(term())), keyword()) :: boolean()
+  def await_text(app, fun, opts \\ []) when is_function(fun, 1) do
+    await(fn -> app |> text() |> fun.() end, opts)
+  end
+
   defp await(fun, opts) do
     attempts = Keyword.get(opts, :attempts, @default_attempts)
     interval = Keyword.get(opts, :interval, @default_interval)

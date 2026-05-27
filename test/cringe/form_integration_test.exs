@@ -82,7 +82,7 @@ defmodule Cringe.FormIntegrationTest do
     defp move_focus(state, direction) do
       layout = Engine.layout(document(state))
       focus_id = Layout.focus_id(layout, direction, Focus.current(state.focus))
-      %{state | focus: Focus.new(Enum.map(Layout.focusable(layout), & &1.id), current: focus_id)}
+      %{state | focus: Focus.new(Layout.focus_ids(layout), current: focus_id)}
     end
 
     defp update_input(state, field, event) do
@@ -117,11 +117,15 @@ defmodule Cringe.FormIntegrationTest do
 
     assert Runtime.state(app).submitted == "Dan <dan@example.com> as Editor"
 
+    assert Driver.await_text(
+             app,
+             &String.contains?(&1, "Submitted: Dan <dan@example.com> as Editor")
+           )
+
     text = Driver.text(app)
 
     assert text =~ "> Dan"
     assert text =~ "> dan@example.com"
     assert text =~ "› Editor"
-    assert text =~ "Submitted: Dan <dan@example.com> as Editor"
   end
 end
