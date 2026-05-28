@@ -137,6 +137,40 @@ defmodule Cringe.RuntimeTest do
     assert output =~ "Count: 1"
   end
 
+  test "renders overlays above app documents" do
+    assert {:ok, app} = Driver.start(Counter, width: 24, height: 7)
+
+    assert :ok = Runtime.show_overlay(app, :dialog, Cringe.text("Overlay"), anchor: :center)
+
+    text = Runtime.text(app)
+
+    assert text =~ "Count: 0"
+    assert text =~ "Overlay"
+  end
+
+  test "paints overlay changes immediately" do
+    assert {:ok, app} = Driver.start(Counter, backend: Test, width: 24, height: 7)
+
+    assert :ok = Runtime.paint(app)
+    assert :ok = Runtime.show_overlay(app, :dialog, Cringe.text("Overlay"), anchor: :center)
+    assert [_initial, overlay_output] = Test.frames(app)
+    assert overlay_output =~ "Overlay"
+  end
+
+  test "hides and clears runtime overlays" do
+    assert {:ok, app} = Driver.start(Counter, width: 24, height: 7)
+
+    assert :ok = Runtime.show_overlay(app, :one, Cringe.text("One"))
+    assert :ok = Runtime.show_overlay(app, :two, Cringe.text("Two"), capture?: false)
+    assert [:one, :two] = app |> Runtime.overlays() |> Map.fetch!(:layers) |> Enum.map(& &1.id)
+
+    assert :ok = Runtime.hide_overlay(app, :one)
+    assert [:two] = app |> Runtime.overlays() |> Map.fetch!(:layers) |> Enum.map(& &1.id)
+
+    assert :ok = Runtime.clear_overlays(app)
+    assert Runtime.overlays(app).layers == []
+  end
+
   test "handles Ghostty TTY key messages and repaints" do
     assert {:ok, app} = Driver.start(Counter, backend: Test)
 

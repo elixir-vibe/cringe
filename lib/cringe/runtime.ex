@@ -6,6 +6,8 @@ defmodule Cringe.Runtime do
   use GenServer
 
   alias Cringe.Event
+  alias Cringe.Overlay
+  alias Cringe.Overlay.Layer
   alias Cringe.Runtime.{TerminalSession, TickManager}
   alias Cringe.Terminal.KeyDecoder
 
@@ -48,6 +50,20 @@ defmodule Cringe.Runtime do
   @spec backend_state(GenServer.server()) :: term()
   def backend_state(server), do: GenServer.call(server, :backend_state)
 
+  @spec show_overlay(GenServer.server(), term(), Cringe.Document.t(), keyword()) :: :ok
+  def show_overlay(server, id, document, opts \\ []) do
+    GenServer.call(server, {:show_overlay, id, document, opts})
+  end
+
+  @spec hide_overlay(GenServer.server(), term()) :: :ok
+  def hide_overlay(server, id), do: GenServer.call(server, {:hide_overlay, id})
+
+  @spec clear_overlays(GenServer.server()) :: :ok
+  def clear_overlays(server), do: GenServer.call(server, :clear_overlays)
+
+  @spec overlays(GenServer.server()) :: Overlay.State.t()
+  def overlays(server), do: GenServer.call(server, :overlays)
+
   @impl GenServer
   def init(opts) do
     app = Keyword.fetch!(opts, :app)
@@ -71,6 +87,7 @@ defmodule Cringe.Runtime do
          backend: backend,
          backend_state: backend_state,
          painter: new_painter(render_opts),
+         overlays: Overlay.new(),
          child_supervisor: child_supervisor,
          tick_manager: start_tick_manager(ticks, child_supervisor),
          terminal_session: terminal_session
@@ -113,6 +130,24 @@ defmodule Cringe.Runtime do
 
   def handle_call(:backend_state, _from, %{backend_state: backend_state} = state),
     do: {:reply, backend_state, state}
+
+  def handle_call({:show_overlay, id, document, opts}, _from, state) do
+    layer = Layer.new(id, document, opts)
+    next_state = %{state | overlays: Overlay.put(state.overlays, layer)}
+    {:reply, :ok, paint_after_input(next_state)}
+  end
+
+  def handle_call({:hide_overlay, id}, _from, state) do
+    next_state = %{state | overlays: Overlay.remove(state.overlays, id)}
+    {:reply, :ok, paint_after_input(next_state)}
+  end
+
+  def handle_call(:clear_overlays, _from, state) do
+    next_state = %{state | overlays: Overlay.new()}
+    {:reply, :ok, paint_after_input(next_state)}
+  end
+
+  def handle_call(:overlays, _from, state), do: {:reply, state.overlays, state}
 
   @impl GenServer
   def handle_info({Ghostty.TTY, _tty, {:key, event}}, state) do
@@ -262,12 +297,33 @@ defmodule Cringe.Runtime do
     Cringe.Painter.new(Keyword.fetch!(opts, :width), Keyword.fetch!(opts, :height))
   end
 
-  defp render_text(%{app: app, app_state: app_state, text_opts: text_opts}) do
+  defp render_text(%{
+         app: app,
+         app_state: app_state,
+         overlays: %{layers: []},
+         text_opts: text_opts
+       }) do
     app_state |> app.render() |> Cringe.render(text_opts)
   end
 
-  defp paint_output(%{app: app, app_state: app_state, render_opts: render_opts, painter: painter}) do
-    frame = app_state |> app.render() |> Cringe.frame(render_opts)
+  defp render_text(%{render_opts: render_opts} = state) do
+    state
+    |> render_frame(render_opts)
+    |> Cringe.Frame.text()
+  end
+
+  defp paint_output(%{render_opts: render_opts, painter: painter} = state) do
+    frame = render_frame(state, render_opts)
     Cringe.Painter.render(painter, frame)
+  end
+
+  defp render_frame(%{app: app, app_state: app_state, overlays: overlays}, opts) do
+    document = app.render(app_state)
+
+    if overlays.layers == [] do
+      Cringe.frame(document, opts)
+    else
+      Overlay.frame(document, overlays, opts)
+    end
   end
 end

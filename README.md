@@ -323,6 +323,14 @@ Cringe.Overlay.render(text("base"), overlays, width: 80, height: 24)
 Layers are ordered bottom-to-top. Use `Cringe.Overlay.State.capturing/1` if an
 app wants to route input to the topmost capturing layer.
 
+The runtime can also own overlay state and repaint immediately:
+
+```elixir
+Cringe.Runtime.show_overlay(app, :dialog, dialog(title: "Continue?"), anchor: :center)
+Cringe.Runtime.hide_overlay(app, :dialog)
+Cringe.Runtime.clear_overlays(app)
+```
+
 ## Architecture
 
 Cringe keeps each terminal UI stage explicit:
