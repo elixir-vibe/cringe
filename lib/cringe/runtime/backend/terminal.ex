@@ -16,7 +16,8 @@ defmodule Cringe.Runtime.Backend.Terminal do
           terminal_session: GenServer.server() | nil,
           terminal_session_module: module(),
           alternate_screen?: boolean(),
-          hide_cursor?: boolean()
+          hide_cursor?: boolean(),
+          disable_autowrap?: boolean()
         }
 
   @impl true
@@ -29,7 +30,8 @@ defmodule Cringe.Runtime.Backend.Terminal do
       terminal_session: terminal_session,
       terminal_session_module: Keyword.get(opts, :terminal_session_module, TerminalSession),
       alternate_screen?: Keyword.get(opts, :alternate_screen, false),
-      hide_cursor?: Keyword.get(opts, :hide_cursor, true)
+      hide_cursor?: Keyword.get(opts, :hide_cursor, true),
+      disable_autowrap?: Keyword.get(opts, :disable_autowrap, true)
     }
 
     write(state, startup_sequence(state))
@@ -56,6 +58,7 @@ defmodule Cringe.Runtime.Backend.Terminal do
   defp startup_sequence(state) do
     [
       if(state.alternate_screen?, do: "\e[?1049h", else: ""),
+      if(state.disable_autowrap?, do: "\e[?7l", else: ""),
       if(state.hide_cursor?, do: "\e[?25l", else: ""),
       "\e[H\e[2J"
     ]
@@ -64,6 +67,7 @@ defmodule Cringe.Runtime.Backend.Terminal do
   defp shutdown_sequence(state) do
     [
       if(state.hide_cursor?, do: "\e[?25h", else: ""),
+      if(state.disable_autowrap?, do: "\e[?7h", else: ""),
       if(state.alternate_screen?, do: "\e[?1049l", else: "")
     ]
   end

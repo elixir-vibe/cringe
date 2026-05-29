@@ -122,9 +122,11 @@ defmodule Cringe.RuntimeTest do
     assert {_input, output} = StringIO.contents(device)
 
     assert output =~ "\e[?1049h"
+    assert output =~ "\e[?7l"
     assert output =~ "\e[?25l"
     assert output =~ "Count: 0"
     assert output =~ "\e[?25h"
+    assert output =~ "\e[?7h"
     assert output =~ "\e[?1049l"
   end
 

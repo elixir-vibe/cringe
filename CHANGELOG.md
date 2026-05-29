@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Disable terminal autowrap while the terminal backend owns the screen to avoid full-width repaint drift.
 - Add interactive and static terminal showcase examples covering current widgets and overlays.
 - Add runtime-owned overlay state with show, hide, clear, and repaint APIs.
 - Add a generic `Cringe.Widgets.Menu` with sections, separators, shortcuts, and disabled items.
