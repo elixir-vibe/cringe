@@ -25,7 +25,7 @@ end
 
 {:ok, app} =
   Cringe.run(TickingSpinner,
-    backend: {Cringe.Runtime.Backend.Terminal, alternate_screen: true},
+    backend: {Cringe.Runtime.Backend.Terminal, alternate_screen: true, takeover: true},
     ticks: [spinner: 100],
     ansi: true
   )

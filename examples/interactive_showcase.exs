@@ -321,7 +321,7 @@ end
 
 {:ok, app} =
   Cringe.run(InteractiveShowcase,
-    backend: {Cringe.Runtime.Backend.Terminal, alternate_screen: true},
+    backend: {Cringe.Runtime.Backend.Terminal, alternate_screen: true, takeover: true},
     ansi: true,
     width: 100,
     height: 34

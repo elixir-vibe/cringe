@@ -57,7 +57,7 @@ end
 
 {:ok, app} =
   Cringe.run(LayoutFocusForm,
-    backend: {Cringe.Runtime.Backend.Terminal, alternate_screen: true},
+    backend: {Cringe.Runtime.Backend.Terminal, alternate_screen: true, takeover: true},
     ansi: true
   )
 
