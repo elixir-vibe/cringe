@@ -401,6 +401,7 @@ mix run examples/form.exs
 mix run examples/layout_focus_form.exs
 mix run examples/menu.exs
 mix run examples/select_list.exs
+mix run examples/showcase.exs
 mix run examples/table.exs
 mix run examples/tabs.exs
 mix run examples/ticking_spinner.exs
