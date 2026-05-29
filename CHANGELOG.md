@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Avoid painting the terminal's final column in terminal backend runtime frames.
 - Disable terminal autowrap while the terminal backend owns the screen to avoid full-width repaint drift.
 - Add interactive and static terminal showcase examples covering current widgets and overlays.
 - Add runtime-owned overlay state with show, hide, clear, and repaint APIs.

@@ -86,7 +86,7 @@ defmodule Cringe.Runtime do
          text_opts: text_opts,
          backend: backend,
          backend_state: backend_state,
-         painter: new_painter(render_opts),
+         painter: new_painter(render_opts, backend),
          overlays: Overlay.new(),
          child_supervisor: child_supervisor,
          tick_manager: start_tick_manager(ticks, child_supervisor),
@@ -268,7 +268,7 @@ defmodule Cringe.Runtime do
 
   defp resize(state, width, height) do
     render_opts = state.render_opts |> Keyword.put(:width, width) |> Keyword.put(:height, height)
-    %{state | render_opts: render_opts, painter: new_painter(render_opts)}
+    %{state | render_opts: render_opts, painter: new_painter(render_opts, state.backend)}
   end
 
   defp paint_after_input(%{backend: nil} = state), do: state
@@ -293,9 +293,14 @@ defmodule Cringe.Runtime do
     |> Keyword.put_new(:height, @default_height)
   end
 
-  defp new_painter(opts) do
-    Cringe.Painter.new(Keyword.fetch!(opts, :width), Keyword.fetch!(opts, :height))
+  defp new_painter(opts, backend) do
+    width = Keyword.fetch!(opts, :width)
+    height = Keyword.fetch!(opts, :height)
+    Cringe.Painter.new(painter_width(width, backend), height)
   end
+
+  defp painter_width(width, Cringe.Runtime.Backend.Terminal), do: max(width - 1, 1)
+  defp painter_width(width, _backend), do: width
 
   defp render_text(%{
          app: app,

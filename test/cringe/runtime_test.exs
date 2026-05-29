@@ -130,6 +130,23 @@ defmodule Cringe.RuntimeTest do
     assert output =~ "\e[?1049l"
   end
 
+  test "terminal backend avoids painting the final column" do
+    {:ok, device} = StringIO.open("")
+
+    assert {:ok, app} =
+             Driver.start(Counter,
+               backend: {Terminal, device: device},
+               width: 12,
+               height: 5
+             )
+
+    assert :ok = Runtime.paint(app)
+    assert {_input, output} = StringIO.contents(device)
+
+    refute output =~ "╭──────────╮"
+    assert output =~ "╭──────────"
+  end
+
   test "decodes terminal input and repaints" do
     assert {:ok, app} = Driver.start(Counter, backend: Test)
 

@@ -7,6 +7,7 @@ defmodule Cringe.Painter do
   """
 
   alias Cringe.Frame
+  alias Cringe.Measure
 
   @enforce_keys [:width, :height]
   defstruct [:width, :height, previous: [], cursor: nil, cursor_visible?: false]
@@ -24,7 +25,7 @@ defmodule Cringe.Painter do
 
   @spec render(t(), Cringe.Document.t() | Frame.t()) :: {IO.chardata(), t()}
   def render(%__MODULE__{} = painter, %Frame{} = frame) do
-    lines = frame.lines |> Enum.take(painter.height)
+    lines = frame.lines |> Enum.take(painter.height) |> Enum.map(&Measure.take(&1, painter.width))
     cursor = visible_cursor(frame.cursor, painter)
     output = output(paint(painter.previous, lines), cursor_output(painter, cursor))
 
