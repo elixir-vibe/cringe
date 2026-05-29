@@ -397,6 +397,7 @@ mix run examples/editor.exs
 mix run examples/generic_form.exs
 mix run examples/interactive_counter.exs
 mix run examples/interactive_input.exs
+mix run examples/interactive_showcase.exs
 mix run examples/form.exs
 mix run examples/layout_focus_form.exs
 mix run examples/menu.exs

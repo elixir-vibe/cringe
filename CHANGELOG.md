@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Add a terminal showcase example covering current widgets and overlays.
+- Add interactive and static terminal showcase examples covering current widgets and overlays.
 - Add runtime-owned overlay state with show, hide, clear, and repaint APIs.
 - Add a generic `Cringe.Widgets.Menu` with sections, separators, shortcuts, and disabled items.
 - Add pure document-level overlay composition with positioned layers.
