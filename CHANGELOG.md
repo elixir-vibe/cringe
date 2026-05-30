@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Use full-frame repaints for the terminal backend to avoid differential repaint drift.
 - Avoid painting the terminal's final column in terminal backend runtime frames.
 - Disable terminal autowrap while the terminal backend owns the screen to avoid full-width repaint drift.
 - Add interactive and static terminal showcase examples covering current widgets and overlays.

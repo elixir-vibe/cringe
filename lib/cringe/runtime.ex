@@ -317,6 +317,11 @@ defmodule Cringe.Runtime do
     |> Cringe.Frame.text()
   end
 
+  defp paint_output(%{backend: Cringe.Runtime.Backend.Terminal, render_opts: render_opts} = state) do
+    frame = render_frame(state, render_opts)
+    render_opts |> new_painter(state.backend) |> Cringe.Painter.render(frame)
+  end
+
   defp paint_output(%{render_opts: render_opts, painter: painter} = state) do
     frame = render_frame(state, render_opts)
     Cringe.Painter.render(painter, frame)

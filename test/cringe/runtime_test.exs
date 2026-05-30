@@ -147,6 +147,25 @@ defmodule Cringe.RuntimeTest do
     assert output =~ "╭──────────"
   end
 
+  test "terminal backend full repaints after changes" do
+    {:ok, device} = StringIO.open("")
+
+    assert {:ok, app} =
+             Driver.start(Counter,
+               backend: {Terminal, device: device},
+               width: 20,
+               height: 5
+             )
+
+    assert :ok = Runtime.paint(app)
+    assert :ok = Driver.key(app, :up)
+    assert :ok = Runtime.paint(app)
+    assert {_input, output} = StringIO.contents(device)
+
+    assert output |> String.split("\e[H\e[2J") |> length() >= 3
+    assert output =~ "Count: 1"
+  end
+
   test "decodes terminal input and repaints" do
     assert {:ok, app} = Driver.start(Counter, backend: Test)
 
